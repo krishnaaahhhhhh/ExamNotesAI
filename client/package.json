@@ -11,10 +11,10 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.11.2",
+    "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.5",
     "firebase": "^12.9.0",
-    "install": "^0.13.0",
     "mermaid": "^11.12.2",
     "motion": "^12.34.0",
     "npm": "^11.10.0",

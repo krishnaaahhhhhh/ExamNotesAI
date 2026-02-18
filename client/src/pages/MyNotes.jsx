@@ -41,6 +41,31 @@ const MyNotes = () => {
     fetchMyNotes();
   }, []);
 
+  // Helper function to safely render content and avoid "Objects are not valid" error
+  const renderPreview = (content) => {
+    if (!content) return "No content available.";
+
+    // If it's a simple string, show it
+    if (typeof content === "string") {
+      return content.substring(0, 150);
+    }
+
+    // If it's the structured object from Gemini (metadata, notes, etc.)
+    if (typeof content === "object" && content !== null) {
+      // Try to find the actual 'notes' or 'summary' inside the object
+      const previewText =
+        content.notes ||
+        content.summary ||
+        content.metadata?.topicName ||
+        "Deep analysis ready...";
+      return typeof previewText === "string"
+        ? previewText.substring(0, 150)
+        : "Structured data module";
+    }
+
+    return "Click to view details";
+  };
+
   return (
     <div className="min-h-screen bg-[#020202] text-white flex flex-col overflow-x-hidden relative selection:bg-indigo-500/30">
       <Navbar />
@@ -106,9 +131,6 @@ const MyNotes = () => {
             <p className="text-gray-500 text-2xl font-black italic uppercase tracking-tighter">
               Vault khali hai Krishna bhai.
             </p>
-            <p className="text-gray-700 text-xs uppercase tracking-widest mt-2">
-              Generate something legendary to populate the archive.
-            </p>
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -128,7 +150,6 @@ const MyNotes = () => {
                   whileHover={{ y: -10 }}
                   className="group relative p-10 rounded-[3rem] bg-gradient-to-br from-white/[0.04] to-transparent border border-white/5 hover:border-indigo-500/40 transition-all duration-700 backdrop-blur-3xl overflow-hidden flex flex-col justify-between min-h-[400px]"
                 >
-                  {/* Hover Glow Component */}
                   <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-500/10 blur-[80px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
                   <div className="relative z-10">
@@ -136,23 +157,19 @@ const MyNotes = () => {
                       <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-xl text-gray-400 group-hover:text-indigo-400 group-hover:bg-indigo-500/10 transition-all duration-500 shadow-inner">
                         <FaRegFileLines />
                       </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-[9px] font-black text-indigo-400/50 uppercase tracking-widest bg-indigo-500/5 px-3 py-1 rounded-full group-hover:bg-indigo-500/20 group-hover:text-indigo-400 transition-all">
-                          {note.classLevel || "Pro"}
-                        </span>
-                      </div>
+                      <span className="text-[9px] font-black text-indigo-400/50 uppercase tracking-widest bg-indigo-500/5 px-3 py-1 rounded-full">
+                        {note.classLevel || "Pro"}
+                      </span>
                     </div>
 
                     <h3 className="text-2xl font-black uppercase italic tracking-tight mb-4 group-hover:text-indigo-400 transition-colors leading-tight">
                       {note.topic || "Untitled Note"}
                     </h3>
 
-                    <p className="text-gray-500 text-xs font-medium leading-relaxed line-clamp-4 opacity-70 group-hover:opacity-100 transition-opacity">
-                      {typeof note.content === "string"
-                        ? note.content.substring(0, 180)
-                        : "Advanced AI analysis processed and ready for your review."}
-                      ...
-                    </p>
+                    <div className="text-gray-500 text-xs font-medium leading-relaxed line-clamp-4 opacity-70 group-hover:opacity-100 transition-opacity">
+                      {/* Using the safe render helper to prevent crash */}
+                      {renderPreview(note.content)}...
+                    </div>
                   </div>
 
                   <div className="relative z-10 pt-10 flex justify-between items-center">
