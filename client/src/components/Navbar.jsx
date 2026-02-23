@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "../assets/books.png";
-import { useSelector, useDispatch } from "react-redux"; // ✅ useDispatch add kiya
-import { useNavigate } from "react-router-dom"; // ✅ useNavigate add kiya
-import axios from "axios"; // ✅ axios add kiya
-import { setUser } from "../redux/userSlice"; // ✅ setUser add kiya
+import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { setUser } from "../redux/userSlice";
 
 const Navbar = () => {
   const { userData } = useSelector((state) => state.user);
@@ -15,10 +15,12 @@ const Navbar = () => {
   const [showCredits, setShowCredits] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
+  // API Base URL from env or fallback to local
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5008";
+
   const userInitial = userData?.name
     ? userData.name.charAt(0).toUpperCase()
     : "U";
-  const firstName = userData?.name ? userData.name.split(" ")[0] : "User";
 
   const toggleCredits = () => {
     setShowCredits(!showCredits);
@@ -32,26 +34,37 @@ const Navbar = () => {
 
   const handleSignout = async () => {
     try {
-      await axios.get("http://localhost:5008/api/auth/logout", {
+      // Hardcoded URL hata kar template literal use kiya hai for dynamic environment
+      await axios.get(`${API_BASE_URL}/api/auth/logout`, {
         withCredentials: true,
       });
+
+      // State clear karke redirect
       dispatch(setUser(null));
       navigate("/auth");
     } catch (error) {
-      console.log("Logout Error:", error);
+      console.error("Logout Error:", error);
+      // Agar API fail bhi ho jaye, local logout force karein
+      dispatch(setUser(null));
+      navigate("/auth");
     }
-  }; // ✅ Ye bracket miss tha!
+  };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: -25 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-4 relative z-20 mx-6 mt-6 rounded-2xl border border-white/10 bg-black/90 backdrop-blur-xl shadow-2xl flex items-center justify-between px-8 py-4"
+      className="p-4 relative z-50 mx-6 mt-6 rounded-2xl border border-white/10 bg-black/90 backdrop-blur-xl shadow-2xl flex items-center justify-between px-8 py-4"
     >
       {/* Left: Logo */}
-      <div className="flex items-center gap-3">
-        <img src={logo} alt="Logo" className="w-10 h-10" />
-        <span className="text-xl font-bold text-white">ExamNotes AI</span>
+      <div
+        className="flex items-center gap-3 cursor-pointer"
+        onClick={() => navigate("/")}
+      >
+        <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
+        <span className="text-xl font-bold text-white tracking-tight">
+          ExamNotes AI
+        </span>
       </div>
 
       {/* Right: Actions */}
@@ -61,6 +74,7 @@ const Navbar = () => {
           <motion.div
             onClick={toggleCredits}
             whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full cursor-pointer hover:bg-white/10 transition-all"
           >
             <span className="text-blue-400">💎</span>
@@ -79,10 +93,10 @@ const Navbar = () => {
                 className="absolute top-14 right-0 w-64 bg-[#0a0a0a] border border-white/10 p-5 rounded-2xl shadow-3xl z-50"
               >
                 <h4 className="font-bold text-blue-400 mb-2">Refill Credits</h4>
-                <p className="text-xs text-gray-400 mb-4">
+                <p className="text-xs text-gray-400 mb-4 leading-relaxed">
                   AI generation ke liye credits zaroori hain. Boost karein!
                 </p>
-                <button className="w-full py-2 bg-blue-600 rounded-lg text-sm font-bold text-white hover:bg-blue-500 transition-all">
+                <button className="w-full py-2 bg-blue-600 rounded-lg text-sm font-bold text-white hover:bg-blue-500 transition-all active:scale-95">
                   Buy More Credits
                 </button>
               </motion.div>
@@ -95,7 +109,8 @@ const Navbar = () => {
           <motion.div
             onClick={toggleProfile}
             whileHover={{ scale: 1.1 }}
-            className="w-10 h-10 rounded-full bg-linear-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold cursor-pointer border-2 border-white/20"
+            whileTap={{ scale: 0.9 }}
+            className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold cursor-pointer border-2 border-white/20 shadow-lg shadow-indigo-500/20"
           >
             {userInitial}
           </motion.div>
@@ -108,22 +123,24 @@ const Navbar = () => {
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 className="absolute top-14 right-0 w-56 bg-[#0a0a0a] border border-white/10 p-4 rounded-2xl shadow-3xl z-50"
               >
-                <div className="border-b border-white/5 pb-2 mb-2">
-                  <p className="text-xs text-gray-500">Logged in as</p>
-                  <p className="text-sm font-bold text-white truncate">
-                    {userData?.email}
+                <div className="border-b border-white/5 pb-3 mb-2">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">
+                    Logged in as
+                  </p>
+                  <p className="text-sm font-medium text-white truncate">
+                    {userData?.email || "User"}
                   </p>
                 </div>
-                <ul className="flex flex-col gap-2">
-                  <li className="text-sm text-gray-300 hover:text-white cursor-pointer">
+                <ul className="flex flex-col gap-1">
+                  <li className="text-sm text-gray-400 hover:text-white hover:bg-white/5 p-2 rounded-lg cursor-pointer transition-all">
                     My Profile
                   </li>
-                  <li className="text-sm text-gray-300 hover:text-white cursor-pointer">
+                  <li className="text-sm text-gray-400 hover:text-white hover:bg-white/5 p-2 rounded-lg cursor-pointer transition-all">
                     Settings
                   </li>
                   <li
                     onClick={handleSignout}
-                    className="text-sm text-red-400 hover:text-red-300 cursor-pointer transition-colors pt-2 border-t border-white/5"
+                    className="mt-1 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 rounded-lg cursor-pointer transition-all border-t border-white/5 pt-3"
                   >
                     Logout
                   </li>

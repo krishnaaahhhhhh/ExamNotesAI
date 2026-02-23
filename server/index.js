@@ -23,12 +23,11 @@ app.post("/api/credits/webhook", express.raw({ type: "application/json" }), stri
 app.use(express.json());
 app.use(cookieParser());
 
-app.use(
-  cors({
-    origin: "http://localhost:5174",
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: ["http://localhost:5173", "https://exam-notes-ai-alpha.vercel.app"], // Dono allow karein
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE"]
+}));
 
 app.get("/", (req, res) => {
   res.send("Backend Running 🚀");
