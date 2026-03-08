@@ -1,7 +1,7 @@
 // ... baaki imports same ...
 const mongoose = require("mongoose");
 // Check karo ki ye path ekdum sahi ho aapke folder structure ke hisaab se
-const userModel = require("../models/user.model.js"); 
+const userModel = require("../models/user.model.js");
 const notesModel = require("../models/notes.model.js");
 const { buildPrompt } = require("../utils/promptBuilder.js");
 const { fetchExamData } = require("../services/gemini.services.js");
@@ -52,7 +52,12 @@ exports.generateNotes = async (req, res) => {
     const prompt = buildPrompt({ topic, classLevel, examType, revisionMode, includeDiagram, field });
 
     // 4️⃣ Gemini AI Call (Same)
-    let airesponse = await fetchExamData(prompt, process.env.GEMINI_API_KEY);
+    let airesponse = await fetchExamData(prompt);
+
+    // Guard: ensure we got a valid object back
+    if (!airesponse || typeof airesponse !== "object") {
+      return res.status(500).json({ success: false, message: "AI returned an invalid response. Please try again." });
+    }
 
     // 5️⃣ Save Notes (UPDATED TO MATCH FRONTEND EXPECTATIONS) 🔥
     const notes = await notesModel.create({

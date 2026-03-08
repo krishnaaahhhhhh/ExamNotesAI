@@ -6,7 +6,7 @@ const mongoose = require("mongoose");
 const connectDb = require("./utils/connectDb");
 
 // 1. dotenv hamesha imports se upar hona chahiye taaki controllers ko keys mil sakein
-dotenv.config(); 
+dotenv.config();
 
 // 2. Ab baaki imports
 const creditsRoute = require("./routes/credits.route.js");
@@ -39,7 +39,7 @@ app.use("/api/user", require("./routes/user.router"));
 // index.js (Line 40 ke aas-paas)
 app.use("/api/notes", require("./routes/generate.route.js")); // ✅ 'user.router' ki jagah 'generate.route' karo
 // ✅ Fixed Variable Name: creditsRoute (Matches your import)
-app.use("/api/credits", creditsRoute); 
+app.use("/api/credits", creditsRoute);
 
 
 const PORT = process.env.PORT || 5008;

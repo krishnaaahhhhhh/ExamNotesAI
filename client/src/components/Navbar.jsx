@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import logo from "../assets/books.png";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 import { setUser } from "../redux/userSlice";
 
 const Navbar = () => {
@@ -15,8 +15,7 @@ const Navbar = () => {
   const [showCredits, setShowCredits] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
-  // API Base URL from env or fallback to local
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5008";
+
 
   const userInitial = userData?.name
     ? userData.name.charAt(0).toUpperCase()
@@ -34,17 +33,13 @@ const Navbar = () => {
 
   const handleSignout = async () => {
     try {
-      // Hardcoded URL hata kar template literal use kiya hai for dynamic environment
-      await axios.get(`${API_BASE_URL}/api/auth/logout`, {
-        withCredentials: true,
-      });
-
-      // State clear karke redirect
+      await axiosInstance.get("/api/auth/logout");
+      localStorage.removeItem("token");
       dispatch(setUser(null));
       navigate("/auth");
     } catch (error) {
       console.error("Logout Error:", error);
-      // Agar API fail bhi ho jaye, local logout force karein
+      localStorage.removeItem("token");
       dispatch(setUser(null));
       navigate("/auth");
     }

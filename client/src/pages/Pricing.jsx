@@ -2,7 +2,9 @@ import React from "react";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
+
+
 
 const Pricing = () => {
   const plans = [
@@ -39,10 +41,9 @@ const Pricing = () => {
 
   const handlePayment = async (planName) => {
     try {
-      const { data } = await axios.post(
-        "http://localhost:5008/api/credits/purchase",
+      const { data } = await axiosInstance.post(
+        "/api/credits/purchase",
         { planName },
-        { withCredentials: true },
       );
 
       if (data.success) {

@@ -12,7 +12,7 @@ const buildPrompt = ({
   includeDiagram,
   field = "General",
 }) => {
-  
+
   const examLower = examType.toLowerCase();
   let boardLogic = "";
 
@@ -49,8 +49,8 @@ This module must ensure that even the toughest examiner cannot find a question o
 3. **EXTREME VISUALS**: Populate 'pieChartData' for exam weightage AND 'barGraphData' for trend analysis (year-wise importance). 
 4. **MERMAID ARCHITECT**: ${includeDiagram ? "Generate a multi-layered, nested Mermaid.js flowchart using 'subgraph' logic for extreme clarity." : "Describe a highly complex professional block diagram."}
 5. **NO BOLD**: Use HIGH-IMPACT Emojis (🛡️, 📈, 🧠, 🧬, ⚡) instead of ** for a modern UI look.
-6. **QUANTITY**: Minimum 25 Flashcards, 12 Mnemonics, and 20 Viva Questions.
-7. **DEPTH**: ${revisionMode ? "Hyper-condensed data bullets." : "TITAN MODE: Minimum 3500-4000 words. Zero fluff, only high-voltage academic data."}
+6. **QUANTITY**: 8 Flashcards, 5 Mnemonics, and 8 Viva Questions.
+7. **DEPTH**: ${revisionMode ? "Hyper-condensed data bullets, max 500 words." : "Concise but powerful: 800-1200 words of high-voltage academic data. No filler."}
 
 ### 🛑 JSON OUTPUT (STRICTLY VALID):
 {

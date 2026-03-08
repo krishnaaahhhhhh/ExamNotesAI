@@ -23,19 +23,27 @@ const App = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Agar logged in hai toh Auth page nahi dikhega, seedha Home pe jayega */}
+        {/* Default: / -> /auth (agar logged out), / -> /home (agar logged in) */}
+        <Route
+          path="/"
+          element={userData ? <Home /> : <Navigate to="/auth" />}
+        />
+
+        {/* Auth page: agar already logged in toh Home pe jao */}
         <Route
           path="/auth"
           element={userData ? <Navigate to="/" /> : <Auth />}
         />
 
-        <Route path="/" element={<Home />} />
         <Route path="/notes" element={<Notes />} />
         <Route path="/my-notes" element={<MyNotes />} />
         <Route path="/credits" element={<Pricing />} />
         <Route path="/credits/success" element={<PaymentSucess />} />
         <Route path="/credits/cancel" element={<PaymentFailed />} />
         <Route path="/notes/:id" element={<SingleNote />} />
+
+        {/* Koi bhi unknown route -> /auth */}
+        <Route path="*" element={<Navigate to="/auth" />} />
       </Routes>
     </BrowserRouter>
   );

@@ -2,11 +2,13 @@ const jwt = require("jsonwebtoken");
 
 const isAuth = (req, res, next) => {
   try {
-    const token = req.cookies.token || req.cookies.user;
+    // Cookie se lo, ya Authorization Header se backup lo
+    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
 
     if (!token) {
       return res.status(401).json({ message: "No token found!" });
     }
+    // ... baaki logic same
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 

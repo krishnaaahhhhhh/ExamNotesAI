@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { FcGoogle } from "react-icons/fc";
 import { signInWithPopup } from "firebase/auth";
 import { auth, provider } from "../utils/firebase";
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 import { useDispatch } from "react-redux";
 import { setUser } from "../redux/userSlice";
 import { useNavigate } from "react-router-dom";
@@ -30,14 +30,18 @@ const Auth = () => {
       setIsRedirecting(true);
 
       // 2. Backend Call
-      const result = await axios.post(
-        "http://localhost:5008/api/auth/google",
-        { name: user.displayName, email: user.email, photo: user.photoURL }, // Photo bhi bhej sakte ho profile ke liye
-        { withCredentials: true },
+      const result = await axiosInstance.post(
+        "/api/auth/google",
+        { name: user.displayName, email: user.email, photo: user.photoURL },
       );
 
       if (result.data.success) {
-        // 3. Redux state update (Isse Navbar turant update ho jayegi)
+        // 3. Save token to localStorage for Authorization header usage
+        if (result.data.token) {
+          localStorage.setItem("token", result.data.token);
+        }
+
+        // 4. Redux state update (Isse Navbar turant update ho jayegi)
         dispatch(setUser(result.data.user));
 
         // 4. ✅ IMMEDIATE REDIRECT
@@ -141,11 +145,10 @@ const Auth = () => {
                   : {}
               }
               whileTap={!isRedirecting ? { scale: 0.98 } : {}}
-              className={`w-full py-5 rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-4 transition-all relative overflow-hidden group/btn ${
-                isRedirecting
-                  ? "bg-indigo-600 text-white"
-                  : "bg-white text-black"
-              }`}
+              className={`w-full py-5 rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-4 transition-all relative overflow-hidden group/btn ${isRedirecting
+                ? "bg-indigo-600 text-white"
+                : "bg-white text-black"
+                }`}
             >
               {!isRedirecting && (
                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-blue-600 translate-y-[100%] group-hover/btn:translate-y-0 transition-transform duration-500 z-0" />

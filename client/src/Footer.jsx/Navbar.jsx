@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom"; // ✅ useNavigate add kiya
 import axios from "axios"; // ✅ axios add kiya
 import { setUser } from "../redux/userSlice"; // ✅ setUser add kiya
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5008";
+
 const Navbar = () => {
   const { userData } = useSelector((state) => state.user);
   const credits = userData ? userData.credits : 0;
@@ -32,7 +34,7 @@ const Navbar = () => {
 
   const handleSignout = async () => {
     try {
-      await axios.get("http://localhost:5008/api/auth/logout", {
+      await axios.get(`${API_BASE_URL}/api/auth/logout`, {
         withCredentials: true,
       });
       dispatch(setUser(null));

@@ -7,7 +7,7 @@ exports.createCreditsOrder = async (req, res) => {
   try {
     // ✅ YAHAN DEFINE KARO: stripe ko require aur initialize dono ek sath
     const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-    
+
     const { planName } = req.body;
     const userId = req.userId;
 
@@ -27,8 +27,8 @@ exports.createCreditsOrder = async (req, res) => {
         quantity: 1,
       }],
       mode: "payment",
-      success_url: `${process.env.CLIENT_URL}/payment-success`,
-      cancel_url: `${process.env.CLIENT_URL}/payment-failed`,
+      success_url: `${process.env.CLIENT_URL}/credits/success`,
+      cancel_url: `${process.env.CLIENT_URL}/credits/cancel`,
       metadata: { userId: userId.toString(), creditsToAdd: credits.toString() },
     });
 
@@ -45,7 +45,7 @@ exports.stripeWebhook = async (req, res) => {
   const sig = req.headers["stripe-signature"];
   let event;
   try {
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }

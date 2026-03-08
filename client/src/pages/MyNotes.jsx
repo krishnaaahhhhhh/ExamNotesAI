@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -11,6 +11,8 @@ import {
   FaClockRotateLeft,
 } from "react-icons/fa6";
 
+
+
 const MyNotes = () => {
   const [userNotes, setUserNotes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,10 +22,7 @@ const MyNotes = () => {
   useEffect(() => {
     const fetchMyNotes = async () => {
       try {
-        const res = await axios.get(
-          "http://localhost:5008/api/notes/my-notes",
-          { withCredentials: true },
-        );
+        const res = await axiosInstance.get("/api/notes/my-notes");
 
         if (res.data.success) {
           setUserNotes(res.data.notes);

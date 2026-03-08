@@ -11,22 +11,26 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    photo: {
+      type: String,
+      default: "",
+    },
     credits:
     {
-        type: Number,
-        default: 50,
-        min: 0
+      type: Number,
+      default: 50,
+      min: 0
     },
-    isCreditsAvailable:{
-        type: Boolean,
-        default: true
+    isCreditsAvailable: {
+      type: Boolean,
+      default: true
     },
     notes: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Notes",
-            default: []
-        }
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Notes",
+        default: []
+      }
     ]
   },
   { timestamps: true }
