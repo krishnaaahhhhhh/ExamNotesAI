@@ -5,6 +5,15 @@ import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../utils/axiosInstance";
 import { setUser } from "../redux/userSlice";
+import { 
+  FaRocket, 
+  FaVault, 
+  FaUser, 
+  FaGear, 
+  FaRightFromBracket, 
+  FaGem, 
+  FaShieldHalved 
+} from "react-icons/fa6";
 
 const Navbar = () => {
   const { userData } = useSelector((state) => state.user);
@@ -113,33 +122,83 @@ const Navbar = () => {
           <AnimatePresence>
             {showProfile && (
               <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                initial={{ opacity: 0, y: 15, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="absolute top-14 right-0 w-56 bg-[#0a0a0a] border border-white/10 p-4 rounded-2xl shadow-3xl z-50"
+                exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                className="absolute top-16 right-0 w-72 bg-[#080808]/95 backdrop-blur-2xl border border-white/10 p-2 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden"
               >
-                <div className="border-b border-white/5 pb-3 mb-2">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">
-                    Logged in as
-                  </p>
-                  <p className="text-sm font-medium text-white truncate">
-                    {userData?.email || "User"}
-                  </p>
+                {/* 1. Header: User Identity */}
+                <div className="p-5 mb-1 bg-white/[0.03] rounded-[1.5rem] border border-white/5">
+                   <div className="flex items-center gap-4 mb-3">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg">
+                        {userInitial}
+                      </div>
+                      <div className="overflow-hidden">
+                         <p className="text-sm font-black text-white truncate italic uppercase tracking-tighter">
+                            {userData?.name || "Bhai"}
+                         </p>
+                         <div className="flex items-center gap-1.5">
+                            <FaShieldHalved className="text-indigo-400 text-[10px]" />
+                            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none">Scholar Elite</span>
+                         </div>
+                      </div>
+                   </div>
+                   <p className="text-[10px] text-gray-500 font-medium truncate opacity-60">
+                      {userData?.email}
+                   </p>
                 </div>
-                <ul className="flex flex-col gap-1">
-                  <li className="text-sm text-gray-400 hover:text-white hover:bg-white/5 p-2 rounded-lg cursor-pointer transition-all">
-                    My Profile
-                  </li>
-                  <li className="text-sm text-gray-400 hover:text-white hover:bg-white/5 p-2 rounded-lg cursor-pointer transition-all">
-                    Settings
+
+                <div className="p-2 space-y-1">
+                  {/* 2. Commands Section */}
+                  <div className="px-3 py-2 text-[9px] font-black text-gray-600 uppercase tracking-[0.3em]">Neural Commands</div>
+                  <li
+                    onClick={() => { navigate("/dashboard"); setShowProfile(false); }}
+                    className="group text-sm text-gray-400 hover:text-white hover:bg-indigo-500/10 p-3 rounded-xl cursor-pointer transition-all flex items-center justify-between list-none"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FaRocket className="text-indigo-500 transition-transform group-hover:scale-110" />
+                      <span className="font-bold">Command Center</span>
+                    </div>
+                    <span className="text-[8px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded font-black italic">PRO</span>
                   </li>
                   <li
-                    onClick={handleSignout}
-                    className="mt-1 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 rounded-lg cursor-pointer transition-all border-t border-white/5 pt-3"
+                    onClick={() => { navigate("/my-notes"); setShowProfile(false); }}
+                    className="group text-sm text-gray-400 hover:text-white hover:bg-white/5 p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3 list-none"
                   >
-                    Logout
+                    <FaVault className="text-gray-600 group-hover:text-white transition-colors" />
+                    <span className="font-bold">The Study Vault</span>
                   </li>
-                </ul>
+
+                  {/* 3. Account Section */}
+                  <div className="px-3 py-2 mt-2 text-[9px] font-black text-gray-600 uppercase tracking-[0.3em]">Account Config</div>
+                  <li 
+                    onClick={() => { navigate("/profile"); setShowProfile(false); }}
+                    className="group text-sm text-gray-400 hover:text-white hover:bg-white/5 p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3 list-none"
+                  >
+                    <FaUser className="text-gray-600 group-hover:text-white transition-colors" />
+                    <span className="font-bold">Profile Config</span>
+                  </li>
+                  <li 
+                    onClick={() => { navigate("/credits"); setShowProfile(false); }}
+                    className="group text-sm text-gray-400 hover:text-white hover:bg-white/5 p-3 rounded-xl cursor-pointer transition-all flex items-center justify-between list-none"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FaGem className="text-blue-400 group-hover:animate-pulse" />
+                      <span className="font-bold">Neural Bank</span>
+                    </div>
+                    <span className="text-[10px] font-black text-white">{credits}</span>
+                  </li>
+
+                  {/* 4. Logout Section */}
+                  <li
+                    onClick={handleSignout}
+                    className="mt-2 text-sm text-red-500 hover:text-white hover:bg-red-500 p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3 list-none border-t border-white/5 pt-4"
+                  >
+                    <FaRightFromBracket />
+                    <span className="font-black italic uppercase tracking-tight">Initiate Logout</span>
+                  </li>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

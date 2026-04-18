@@ -8,6 +8,28 @@ import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from "recharts";
+import {
+  FaPlay,
+  FaCircleStop,
+  FaBoltLightning,
+  FaListCheck,
+  FaGlobe,
+  FaRegCircleQuestion,
+  FaRegCopy,
+  FaCheck,
+  FaYoutube,
+  FaMapLocationDot,
+  FaScaleBalanced,
+  FaCalculator,
+  FaArrowTrendUp,
+  FaQuoteLeft,
+  FaHighlighter,
+  FaLanguage,
+  FaTimeline,
+  FaMicroscope,
+  FaClockRotateLeft
+} from "react-icons/fa6";
+import ReactMarkdown from "react-markdown";
 
 // --- PIE CHART COLORS ---
 const PIE_COLORS = ["#6366f1", "#8b5cf6", "#a78bfa", "#c4b5fd", "#e0d9ff"];
@@ -19,9 +41,23 @@ const MermaidChart = ({ chartData }) => {
 
   useEffect(() => {
     if (!chartData || !ref.current) return;
-    mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose" });
-    const id = `mermaid-${Date.now()}`;
-    mermaid.render(id, chartData).then(({ svg }) => setSvg(svg)).catch(() => { });
+    try {
+      mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose", suppressError: true });
+      const id = `mermaid-${Date.now()}`;
+      
+      // Syntax validation check
+      mermaid.parse(chartData).then(() => {
+        mermaid.render(id, chartData).then(({ svg }) => setSvg(svg)).catch((e) => {
+           console.error("Mermaid Render Error:", e);
+           setSvg(""); // Fail silently
+        });
+      }).catch((e) => {
+        console.warn("Invalid Mermaid Syntax Detected - Hiding Chart");
+        setSvg(""); // Hide broken chart
+      });
+    } catch (err) {
+      console.error("Mermaid Init Error:", err);
+    }
   }, [chartData]);
 
   return (
@@ -90,8 +126,47 @@ const Notes = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
   const [downloading, setDownloading] = useState(false);
   const [notesData, setNotesData] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const LOADING_MESSAGES = [
+    "Firing up Gemini 2.0 AI Engine...",
+    "Scanning 15-year previous year trends...",
+    "Structuring deep technical data...",
+    "Building interactive 3D flashcards...",
+    "Finalizing presentation secrets..."
+  ];
+
+  useEffect(() => {
+    if (loading) {
+      const interval = setInterval(() => {
+        setLoadingMsgIdx((prev) => (prev + 1) % LOADING_MESSAGES.length);
+      }, 2500);
+      return () => clearInterval(interval);
+    }
+  }, [loading]);
+
+  const handlePlayAudio = (text) => {
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      setIsPlaying(false);
+      return;
+    }
+    if (!text) return;
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(v => v.lang.includes('en-GB') || v.lang.includes('en-US')) || voices[0];
+    if (preferredVoice) utterance.voice = preferredVoice;
+    utterance.rate = 1.0;
+    utterance.pitch = 1.1;
+    utterance.onend = () => setIsPlaying(false);
+    
+    setIsPlaying(true);
+    window.speechSynthesis.speak(utterance);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -217,9 +292,21 @@ const Notes = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 onClick={handleGenerate} disabled={loading}
-                className="w-full py-6 bg-white text-black font-black text-xl rounded-2xl disabled:opacity-50"
+                className="w-full py-6 bg-white text-black font-black text-xl rounded-2xl disabled:opacity-50 relative overflow-hidden group"
               >
-                {loading ? "Conjuring Notes..." : "Generate AI Notes 🧠"}
+                {loading ? (
+                   <motion.div
+                     key={loadingMsgIdx}
+                     initial={{ opacity: 0, y: 10 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     exit={{ opacity: 0, y: -10 }}
+                     className="absolute inset-0 flex items-center justify-center font-bold text-lg"
+                   >
+                     {LOADING_MESSAGES[loadingMsgIdx]} <span className="animate-pulse ml-2 text-indigo-500">⏳</span>
+                   </motion.div>
+                ) : (
+                  "Generate AI Notes 🧠"
+                )}
               </motion.button>
             </div>
           </motion.div>
@@ -266,22 +353,75 @@ const Notes = () => {
                 </motion.div>
               )}
 
+              {/* ----- NEW ADVANCED AI BLOCKS ----- */}
+              <div className="space-y-6">
+                {/* Cheat Sheet & Real World side-by-side */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {notesData.cheatSheet && (
+                    <section className="bg-orange-500/5 border border-orange-500/20 p-8 rounded-[2.5rem]">
+                      <div className="flex items-center gap-3 text-orange-400 mb-6 font-black text-sm uppercase tracking-widest"><FaBoltLightning /> Cheat Sheet</div>
+                      <div className="flex flex-wrap gap-3">
+                        {notesData.cheatSheet.map((item, idx) => (
+                          <span key={idx} className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-300 font-mono text-xs shadow-inner">{item}</span>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                  {notesData.realWorldApplication && (
+                    <section className="bg-emerald-500/5 border border-emerald-500/20 p-8 rounded-[2.5rem] relative overflow-hidden">
+                      <FaGlobe className="absolute -bottom-6 -right-6 text-8xl text-emerald-500/10 pointer-events-none" />
+                      <div className="flex items-center gap-3 text-emerald-400 mb-4 font-black text-sm uppercase tracking-widest">Why Learn This?</div>
+                      <p className="text-gray-300 text-sm leading-relaxed relative z-10 italic">{notesData.realWorldApplication}</p>
+                    </section>
+                  )}
+                </div>
+              </div>
+
               {/* MAIN CONTENT */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
                   {/* Detailed Notes */}
-                  <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem] backdrop-blur-md">
+                  <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem] backdrop-blur-md relative group">
+                    <CopyButton text={typeof notesData.notes?.content === "string" ? notesData.notes.content : JSON.stringify(notesData.notes?.content)} />
                     <h4 className="text-2xl font-bold mb-6 text-indigo-400">Detailed Notes</h4>
-                    <div className="prose prose-invert max-w-none text-gray-300 whitespace-pre-wrap leading-relaxed">
-                      {notesData.notes?.content}
+                    <div className="markdown-body text-gray-300 leading-relaxed text-lg">
+                      {typeof notesData.notes?.content === "string" ? (
+                        <ReactMarkdown components={{
+                          h1: ({node, ...props}) => <h1 className="text-3xl font-black text-white mb-6 mt-8 uppercase tracking-tighter" {...props} />,
+                          h2: ({node, ...props}) => <h2 className="text-2xl font-bold text-indigo-300 mb-4 mt-8" {...props} />,
+                          h3: ({node, ...props}) => <h3 className="text-xl font-bold text-white mb-3 mt-6 border-b border-white/10 pb-2" {...props} />,
+                          p: ({node, ...props}) => <p className="mb-6" {...props} />,
+                          ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-6 space-y-3 marker:text-indigo-500" {...props} />,
+                          ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-6 space-y-3 marker:text-indigo-500" {...props} />,
+                          li: ({node, ...props}) => <li {...props} />,
+                          strong: ({node, ...props}) => <strong className="font-black text-white bg-indigo-500/20 px-1.5 py-0.5 rounded" {...props} />,
+                          blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-indigo-500 pl-6 py-2 italic bg-white/5 rounded-r-2xl my-6" {...props} />,
+                          code: ({node, inline, ...props}) => inline ? <code className="bg-white/10 text-pink-400 px-1.5 py-0.5 rounded text-sm font-mono border border-white/10" {...props} /> : <div className="bg-[#080808] p-6 rounded-2xl overflow-x-auto border border-white/10 my-6 text-sm font-mono shadow-inner"><code {...props} /></div>,
+                        }}>
+                          {notesData.notes.content}
+                        </ReactMarkdown>
+                      ) : (
+                        <pre className="whitespace-pre-wrap">{JSON.stringify(notesData.notes?.content, null, 2)}</pre>
+                      )}
                     </div>
                   </section>
 
-                  {/* Mermaid Flowchart */}
-                  {notesData.visuals?.mermaidData && (
+                  {/* Visual Flowcharts */}
+                  {(notesData.visuals?.flowcharts || notesData.visuals?.mermaidData) && (
                     <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem]">
-                      <h4 className="text-2xl font-bold mb-6 text-indigo-400">🔀 Visual Flowchart</h4>
-                      <MermaidChart chartData={notesData.visuals.mermaidData} />
+                      <h4 className="text-2xl font-bold mb-6 text-indigo-400">🔀 Visual Logic Systems</h4>
+                      <div className="space-y-6">
+                        {Array.isArray(notesData.visuals.flowcharts) ? (
+                          notesData.visuals.flowcharts.map((chart, idx) => (
+                            <div key={idx} className="space-y-2">
+                              {notesData.visuals.flowcharts.length > 1 && <p className="text-[9px] font-black uppercase tracking-widest text-indigo-500/50 ml-2">Diagram {idx + 1}</p>}
+                              <MermaidChart chartData={chart} />
+                            </div>
+                          ))
+                        ) : (
+                          <MermaidChart chartData={notesData.visuals.mermaidData} />
+                        )}
+                      </div>
                     </section>
                   )}
 
@@ -324,16 +464,18 @@ const Notes = () => {
                       : null}
                   </div>
 
-                  {/* Flashcards */}
-                  <div className="bg-gradient-to-br from-purple-500/10 to-transparent border border-white/10 p-8 rounded-[2rem]">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-purple-400 mb-6">⚡ Flashcards</h4>
+                  {/* Flashcards (3D Interactive) */}
+                  <div className="bg-transparent">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-emerald-400 mb-6 flex items-center justify-between">
+                      <span>⚡ Flashcards</span>
+                      <span className="text-emerald-500/50 text-[10px]">Click to flip</span>
+                    </h4>
                     {Array.isArray(notesData.flashcards)
                       ? notesData.flashcards.slice(0, 5).map((f, i) => (
-                        <div key={i} className="mb-4 p-4 bg-white/5 rounded-xl border border-white/5">
-                          <p className="text-sm font-bold text-white mb-1">Q: {f.front || f.question}</p>
-                          <p className="text-xs text-gray-400 italic">A: {f.back || f.answer}</p>
-                        </div>
-                      ))
+                          <div key={i} className="mb-4">
+                            <InteractiveFlashcard question={f.front || f.question || "No Question"} answer={f.back || f.answer || "No Answer"} />
+                          </div>
+                        ))
                       : null}
                   </div>
 
@@ -376,20 +518,242 @@ const Notes = () => {
                 </section>
               )}
 
-              {/* Exam Prep / Viva */}
-              {notesData.examPrep?.vivaQuestions?.length > 0 && (
+              {/* Viva Questions */}
+              {notesData.vivaQuestions && Array.isArray(notesData.vivaQuestions) && (
                 <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem]">
-                  <h4 className="text-2xl font-bold mb-6 text-pink-400">🎤 Viva Questions</h4>
-                  <div className="space-y-3">
-                    {notesData.examPrep.vivaQuestions.slice(0, 8).map((q, i) => (
-                      <div key={i} className="flex gap-4 items-start p-4 bg-white/5 rounded-2xl border border-white/5">
-                        <span className="text-pink-400 font-black text-sm min-w-[24px]">{i + 1}.</span>
-                        <p className="text-sm text-gray-300">{q}</p>
+                  <h4 className="text-2xl font-bold mb-8 text-emerald-400 flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-sm"><FaRegCircleQuestion /></span>
+                    Viva Voce Expert List
+                  </h4>
+                  <div className="grid grid-cols-1 gap-6">
+                    {notesData.vivaQuestions.map((viva, i) => (
+                      <div key={i} className="bg-white/5 border border-white/10 p-6 rounded-2xl hover:bg-white/[0.07] transition-all">
+                        <p className="text-sm font-black text-emerald-400 mb-2 uppercase tracking-widest">Question {i + 1}</p>
+                        <p className="text-lg font-bold text-white mb-4 italic leading-relaxed">"{viva.question}"</p>
+                        <div className="h-px bg-white/10 w-full mb-4" />
+                        <p className="text-[10px] font-black text-indigo-400 mb-2 uppercase tracking-widest">Ideal Answer</p>
+                        <p className="text-gray-300 text-sm leading-relaxed">{viva.answer}</p>
                       </div>
                     ))}
                   </div>
                 </section>
               )}
+
+              {/* 6. Comparative Analysis (Differences) */}
+              {notesData.comparativeAnalysis && Array.isArray(notesData.comparativeAnalysis) && notesData.comparativeAnalysis.length > 0 && (
+                <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem] overflow-x-auto text-left">
+                  <h4 className="text-2xl font-bold mb-8 text-indigo-400 flex items-center gap-3">
+                    <FaScaleBalanced /> Comparative Analysis
+                  </h4>
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <th className="py-4 px-6 text-xs font-black uppercase tracking-widest text-gray-500">Feature</th>
+                        <th className="py-4 px-6 text-indigo-300 font-bold italic">Item A</th>
+                        <th className="py-4 px-6 text-emerald-300 font-bold italic">Item B</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {notesData.comparativeAnalysis.map((row, i) => (
+                        <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                          <td className="py-4 px-6 text-sm font-bold text-gray-300">{row.feature}</td>
+                          <td className="py-4 px-6 text-sm text-gray-400">{row.item1}</td>
+                          <td className="py-4 px-6 text-sm text-gray-400">{row.item2}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </section>
+              )}
+
+              {/* 7. Formula & Theorem Bank */}
+              {notesData.formulaTheoremBank && Array.isArray(notesData.formulaTheoremBank) && notesData.formulaTheoremBank.length > 0 && (
+                <section className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                  {notesData.formulaTheoremBank.map((f, i) => (
+                    <div key={i} className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-white/10 p-8 rounded-3xl relative overflow-hidden group">
+                      <FaCalculator className="absolute -bottom-4 -right-4 text-7xl text-indigo-500/10 group-hover:scale-110 transition-transform" />
+                      <h5 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-4">{f.title}</h5>
+                      <div className="bg-black/40 p-4 rounded-xl border border-white/5 mb-4 font-mono text-center text-lg text-white shadow-inner">
+                        {f.formula}
+                      </div>
+                      <p className="text-sm text-gray-400 leading-relaxed">{f.description}</p>
+                    </div>
+                  ))}
+                </section>
+              )}
+
+              {/* 8. Step-by-Step Derivations */}
+              {notesData.stepByStepDerivations && Array.isArray(notesData.stepByStepDerivations) && notesData.stepByStepDerivations.length > 0 && (
+                <section className="space-y-8 text-left">
+                  {notesData.stepByStepDerivations.map((d, i) => (
+                    <div key={i} className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem]">
+                      <h4 className="text-xl font-bold mb-8 text-indigo-300 flex items-center gap-3">
+                        <FaArrowTrendUp /> {d.title}
+                      </h4>
+                      <div className="space-y-6">
+                        {d.steps.map((step, idx) => (
+                          <div key={idx} className="flex gap-6">
+                            <div className="flex flex-col items-center">
+                              <div className="w-8 h-8 rounded-full bg-indigo-500 text-black font-black flex items-center justify-center text-xs shrink-0">
+                                {idx + 1}
+                              </div>
+                              {idx !== d.steps.length - 1 && <div className="w-0.5 grow bg-indigo-500/20 my-2" />}
+                            </div>
+                            <p className="text-gray-300 text-lg leading-relaxed pt-1">{step}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </section>
+              )}
+
+              {/* 9. Scientific Definitions */}
+              {notesData.scientificDefinitions && Array.isArray(notesData.scientificDefinitions) && notesData.scientificDefinitions.length > 0 && (
+                <section className="bg-emerald-500/5 border border-emerald-500/20 p-10 rounded-[2.5rem] relative overflow-hidden text-left">
+                   <FaQuoteLeft className="absolute top-8 left-8 text-6xl text-emerald-500/10" />
+                   <div className="flex items-center gap-3 text-emerald-400 mb-8 font-black text-sm uppercase tracking-widest relative z-10">
+                     Formal Scientific Definitions
+                   </div>
+                   <div className="space-y-8 relative z-10">
+                     {notesData.scientificDefinitions.map((d, i) => (
+                       <div key={i} className="pl-12 border-l-2 border-emerald-500/30">
+                         <p className="text-emerald-400 font-bold mb-2 uppercase text-[10px] tracking-[0.2em]">{d.term}</p>
+                         <p className="text-gray-200 text-xl font-medium leading-relaxed italic">"{d.definition}"</p>
+                       </div>
+                     ))}
+                   </div>
+                </section>
+              )}
+
+              {/* 10. Predictive Marking Scheme */}
+              {notesData.markingScheme && Array.isArray(notesData.markingScheme) && notesData.markingScheme.length > 0 && (
+                <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem] text-left">
+                  <h4 className="text-2xl font-bold mb-8 text-orange-400 flex items-center gap-3">
+                    <FaHighlighter /> Predictive Marking Scheme
+                  </h4>
+                  <div className="space-y-4">
+                    {notesData.markingScheme.map((s, i) => (
+                      <div key={i} className="flex items-center justify-between bg-white/5 border border-white/5 p-6 rounded-2xl">
+                        <div className="flex-1 pr-6">
+                          <p className="text-white font-bold mb-1">{s.component}</p>
+                          <p className="text-xs text-gray-500">{s.detail}</p>
+                        </div>
+                        <div className="shrink-0 bg-orange-500/20 text-orange-400 px-4 py-2 rounded-xl font-black text-sm border border-orange-500/30">
+                          +{s.marks} Marks
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* 11. Glossary & Historical Evolution */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
+                {notesData.glossary && Array.isArray(notesData.glossary) && notesData.glossary.length > 0 && (
+                  <section className="bg-white/[0.02] border border-white/10 p-8 rounded-[2rem]">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-6 flex items-center gap-3">
+                      <FaLanguage /> Glossary
+                    </h4>
+                    <div className="space-y-4">
+                      {notesData.glossary.map((g, i) => (
+                        <div key={i}>
+                          <span className="text-indigo-300 font-bold text-sm block mb-1">{g.term}</span>
+                          <p className="text-xs text-gray-500 leading-relaxed">{g.definition}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+                {notesData.historicalEvolution && (
+                  <section className="bg-indigo-500/5 border border-indigo-500/20 p-8 rounded-[2rem]">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-6 flex items-center gap-3">
+                      <FaClockRotateLeft /> Historical Evolution
+                    </h4>
+                    <p className="text-sm text-gray-400 leading-relaxed italic">
+                      {notesData.historicalEvolution}
+                    </p>
+                  </section>
+                )}
+               </div>
+
+               {/* 13. Industry 2036 Roadmap & Prototype */}
+               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-left">
+                 {notesData.industryRoadmap && Array.isArray(notesData.industryRoadmap) && (
+                   <section className="lg:col-span-2 bg-gradient-to-br from-indigo-500/5 to-transparent border border-white/10 p-10 rounded-[2.5rem] relative overflow-hidden">
+                     <div className="absolute top-0 right-0 p-8 opacity-10"><FaTimeline className="text-8xl" /></div>
+                     <h4 className="text-2xl font-bold mb-10 text-indigo-400 flex items-center gap-3">
+                       🚀 Industry 2036 Roadmap
+                     </h4>
+                     <div className="space-y-8 relative z-10">
+                       {notesData.industryRoadmap.map((step, i) => (
+                         <div key={i} className="flex gap-6 group">
+                           <div className="flex flex-col items-center">
+                             <div className="px-3 py-1 bg-indigo-500 text-black font-black rounded-lg text-[10px] mb-2">{step.year}</div>
+                             {i !== notesData.industryRoadmap.length - 1 && <div className="w-px grow bg-indigo-500/20" />}
+                           </div>
+                           <p className="text-gray-300 text-lg font-medium pt-1 group-hover:text-white transition-colors">{step.milestone}</p>
+                         </div>
+                       ))}
+                     </div>
+                   </section>
+                 )}
+
+                 {notesData.futuristicPrototype && (
+                   <section className="bg-[#0a0a0a] border-2 border-indigo-500/30 p-8 rounded-[2rem] relative shadow-[0_0_50px_rgba(79,70,229,0.1)]">
+                     <div className="flex items-center gap-3 text-indigo-400 mb-6 font-black text-xs uppercase tracking-widest">
+                       <FaMicroscope /> AI-Dreamed Prototype
+                     </div>
+                     <h5 className="text-xl font-bold text-white mb-4 italic">"{notesData.futuristicPrototype.concept}"</h5>
+                     <p className="text-sm text-gray-400 leading-relaxed">
+                       {notesData.futuristicPrototype.vision}
+                     </p>
+                     <div className="mt-8 pt-8 border-t border-white/5 flex items-center gap-2 text-[10px] font-black text-indigo-500 uppercase tracking-tighter">
+                       <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                       2036 Feasibility: High
+                     </div>
+                   </section>
+                 )}
+               </div>
+
+               {/* 14. Zero-Day Hyper-Drive Hack */}
+               {notesData.zeroDayHack && Array.isArray(notesData.zeroDayHack) && notesData.zeroDayHack.length > 0 && (
+                 <section className="bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-2 border-orange-500/30 p-10 rounded-[2.5rem] relative overflow-hidden text-left">
+                    <div className="absolute -top-10 -right-10 text-[180px] text-orange-500/5 font-black uppercase tracking-tighter -rotate-12 pointer-events-none">HACK</div>
+                    <h4 className="text-2xl font-black mb-8 text-orange-400 flex items-center gap-4">
+                      <FaBoltLightning className="animate-pulse" /> 💎 Zero-Day Hyper-Drive Hack
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {notesData.zeroDayHack.map((hack, i) => (
+                        <div key={i} className="bg-black/40 backdrop-blur-md border border-white/10 p-6 rounded-2xl flex items-center gap-4">
+                          <span className="text-orange-500 font-black text-xl italic opacity-50">#{i+1}</span>
+                          <p className="text-sm text-gray-200 font-bold leading-tight">{hack}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-8 text-[10px] font-black text-orange-500/50 uppercase tracking-[0.3em] text-center">Open this 120 seconds before entering the hall</p>
+                 </section>
+               )}
+
+               {/* 12. Exam Hall Checklist */}
+               {notesData.examChecklist && Array.isArray(notesData.examChecklist) && notesData.examChecklist.length > 0 && (
+                <section className="bg-emerald-500/5 border border-emerald-500/20 p-10 rounded-[2.5rem] text-left">
+                  <h4 className="text-2xl font-bold mb-8 text-emerald-400 flex items-center gap-3">
+                    <FaListCheck /> Exam Hall Checklist
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {notesData.examChecklist.map((item, i) => (
+                      <div key={i} className="flex items-center gap-4 bg-white/5 border border-white/5 p-4 rounded-xl">
+                        <div className="w-5 h-5 rounded bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                          <FaCheck className="text-[10px]" />
+                        </div>
+                        <span className="text-sm text-gray-300 font-medium">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
 
             </motion.div>
           )}
@@ -420,3 +784,42 @@ const ToggleButton = ({ label, active, onClick }) => (
 );
 
 export default Notes;
+
+const CopyButton = ({ text }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button onClick={handleCopy} className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-xl text-gray-400 hover:text-white transition-all text-xs flex items-center gap-2 border border-white/10 z-20 opacity-0 group-hover:opacity-100 backdrop-blur-md">
+      {copied ? <FaCheck className="text-emerald-400" /> : <FaRegCopy />}
+      {copied ? "Copied!" : "Copy Content"}
+    </button>
+  );
+};
+
+const InteractiveFlashcard = ({ question, answer }) => {
+  const [isFlipped, setIsFlipped] = useState(false);
+  return (
+    <div className="w-full h-44 cursor-pointer relative group" onClick={() => setIsFlipped(!isFlipped)} style={{ perspective: "1000px" }}>
+      <motion.div animate={{ rotateY: isFlipped ? 180 : 0 }} transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }} className="w-full h-full absolute" style={{ transformStyle: "preserve-3d" }}>
+        
+        {/* Front (Question) */}
+        <div style={{ backfaceVisibility: "hidden" }} className="absolute inset-0 bg-white/5 border border-white/10 rounded-3xl p-6 flex flex-col items-center justify-center text-center shadow-lg hover:border-emerald-500/30 transition-colors group-hover:bg-white/10">
+          <span className="text-emerald-400 font-black text-[10px] uppercase tracking-widest mb-3">Question</span>
+          <h3 className="text-white font-bold leading-relaxed">{question}</h3>
+          <span className="absolute bottom-4 text-emerald-500/30 text-[10px] font-bold uppercase tracking-widest animate-pulse">Click to Flip ↺</span>
+        </div>
+        
+        {/* Back (Answer) */}
+        <div style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }} className="absolute inset-0 bg-emerald-900/40 border border-emerald-500/30 rounded-3xl p-6 flex flex-col items-center justify-center text-center overflow-y-auto shadow-lg custom-scrollbar">
+          <span className="text-emerald-400 font-black text-[10px] uppercase tracking-widest mb-3">Answer</span>
+          <p className="text-emerald-50 text-sm leading-relaxed">{answer}</p>
+        </div>
+
+      </motion.div>
+    </div>
+  );
+};

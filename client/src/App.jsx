@@ -11,6 +11,8 @@ import Pricing from "./pages/Pricing.jsx";
 import PaymentSucess from "./pages/PaymentSucess.jsx";
 import PaymentFailed from "./pages/PaymentFailed.jsx";
 import SingleNote from "./pages/SingleNote.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
+import Profile from "./pages/Profile.jsx";
 
 const App = () => {
   const dispatch = useDispatch();
@@ -41,6 +43,8 @@ const App = () => {
         <Route path="/credits/success" element={<PaymentSucess />} />
         <Route path="/credits/cancel" element={<PaymentFailed />} />
         <Route path="/notes/:id" element={<SingleNote />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
 
         {/* Koi bhi unknown route -> /auth */}
         <Route path="*" element={<Navigate to="/auth" />} />
