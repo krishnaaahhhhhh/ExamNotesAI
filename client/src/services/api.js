@@ -19,3 +19,13 @@ export const generateNotes = async (payload) => {
     throw error;
   }
 };
+
+export const generatePPTData = async (payload) => {
+  try {
+    const res = await axiosInstance.post("/api/notes/ppt/generate", payload);
+    return res.data;
+  } catch (error) {
+    console.log("Error generating PPT data:", error.response?.status || error.message);
+    throw error;
+  }
+};

@@ -108,4 +108,73 @@ This module must ensure that even the toughest examiner cannot find a question o
 RETURN ONLY VALID JSON. NO PREAMBLE.`;
 };
 
-module.exports = { buildPrompt };
+const buildVideoPrompt = ({ transcript, classLevel, examType }) => {
+  return `
+You are a World-Class Academic Analyst. Convert the following YouTube Video Transcript into EXHAUSTIVE, EXAM-FOCUSED notes for "${classLevel}" aiming for "${examType}".
+
+### 🛑 TRANSCRIPT DATA:
+${transcript}
+
+### 🛑 THE "EXAM ENGINEERING" RULES:
+1. **NO SUMMARY**: Do not just summarize. ENGINEER the content for exam success.
+2. **EXTRACT CORE LOGIC**: Find the hidden technical gems in the video.
+3. **STRUCTURE**: You MUST use the exact JSON structure provided below.
+4. **MARKING SCHEME**: Predict how this video's content will be graded in an exam.
+5. **VISUALS**: Create Mermaid diagrams that represent the logic explained in the video.
+
+### 🛑 JSON OUTPUT FORMAT:
+{
+  "metadata": {
+    "topic": "Topic Name",
+    "difficulty": "Mastery Level",
+    "studyTime": "120 mins",
+    "examStrategy": "Strategy Name",
+    "pieChartData": { "2-Markers": 10, "5-Markers": 20, "10-Markers": 45, "Case-Based": 25 },
+    "barGraphData": { "2021": 5, "2022": 8, "2023": 4, "2024": 9, "2025": 10, "2026_Expected": 10 }
+  },
+  "cheatSheet": ["Fact 1", "Fact 2"],
+  "realWorldApplication": "Explanation...",
+  "vivaQuestions": [{"question": "Q", "answer": "A"}],
+  "comparativeAnalysis": [{"feature": "Criterion", "item1": "A", "item2": "B"}],
+  "formulaTheoremBank": [{"title": "T", "formula": "F", "description": "D"}],
+  "stepByStepDerivations": [{"title": "T", "steps": ["S1", "S2"]}],
+  "scientificDefinitions": [{"term": "T", "definition": "D"}],
+  "markingScheme": [{"component": "C", "marks": 2, "detail": "D"}],
+  "glossary": [{"term": "T", "definition": "D"}],
+  "historicalEvolution": "Markdown string...",
+  "examChecklist": ["Item 1"],
+  "industryRoadmap": [{"year": "2028", "milestone": "M"}],
+  "zeroDayHack": ["Hack 1"],
+  "futuristicPrototype": {"concept": "C", "vision": "V"},
+  "subTopics": {
+    "mustLearn": ["Expl..."],
+    "important": ["Expl..."],
+    "expected2026": ["Q1"],
+    "examinerTraps": ["T1"]
+  },
+  "notes": {
+    "content": "Markdown string...",
+    "technicalData": ["Data 1"]
+  },
+  "visuals": {
+    "flowcharts": ["graph TD; ..."],
+    "description": "Expl..."
+  },
+  "mnemonics": [{ "concept": "C", "trick": "T" }],
+  "flashcards": [{ "question": "Q", "answer": "A" }],
+  "examPrep": {
+    "commonMistakes": ["M1"],
+    "presentationSecrets": "P..."
+  },
+  "practice": {
+    "mcqs": [{ "q": "Q", "options": ["A", "B", "C", "D"], "answer": "A" }],
+    "pyqs": ["P1"]
+  },
+  "caseStudy": "C...",
+  "topperInsights": "T..."
+}
+
+RETURN ONLY VALID JSON. NO PREAMBLE.`;
+};
+
+module.exports = { buildPrompt, buildVideoPrompt };

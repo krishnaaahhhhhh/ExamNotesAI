@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useSelector } from "react-redux";
@@ -19,6 +19,20 @@ const Profile = () => {
   const { userData } = useSelector((state) => state.user);
   const [totalNotes, setTotalNotes] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Animation Variants
+  const containerVars = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1, delayChildren: 0.2 }
+    }
+  };
+
+  const itemVars = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 25 } }
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -43,10 +57,20 @@ const Profile = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#020202] text-white font-sans selection:bg-indigo-500/30 overflow-x-hidden">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, x: 20 }}
+      className="min-h-screen bg-[#020202] text-white font-sans selection:bg-indigo-500/30 overflow-x-hidden"
+    >
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-6 py-28 relative">
+      <motion.main 
+        variants={containerVars}
+        initial="hidden"
+        animate="show"
+        className="max-w-7xl mx-auto px-6 py-28 relative"
+      >
         {/* Ambient Glows */}
         <div className="absolute top-20 left-1/4 w-[600px] h-[600px] bg-indigo-600/5 blur-[150px] rounded-full pointer-events-none" />
         <div className="absolute bottom-20 right-1/4 w-[500px] h-[500px] bg-purple-600/5 blur-[150px] rounded-full pointer-events-none" />
@@ -55,8 +79,7 @@ const Profile = () => {
           {/* --- HERO SECTION: IDENTITY --- */}
           <div className="flex flex-col lg:flex-row gap-16 items-center mb-24">
             <motion.div 
-               initial={{ opacity: 0, scale: 0.8 }}
-               animate={{ opacity: 1, scale: 1 }}
+               variants={itemVars}
                className="relative group"
             >
                <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-[3rem] blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
@@ -69,8 +92,7 @@ const Profile = () => {
             </motion.div>
 
             <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
+              variants={itemVars}
               className="text-center lg:text-left"
             >
               <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400 mb-6">
@@ -97,8 +119,7 @@ const Profile = () => {
             
             {/* Left: Scholar Settings */}
             <motion.div 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
+              variants={itemVars}
               className="lg:col-span-8 space-y-10"
             >
                <section className="p-12 rounded-[4rem] bg-white/[0.02] border border-white/10 backdrop-blur-3xl relative overflow-hidden">
@@ -167,8 +188,7 @@ const Profile = () => {
 
             {/* Right: Summary & Danger Zone */}
             <motion.div 
-               initial={{ opacity: 0, x: 20 }}
-               animate={{ opacity: 1, x: 0 }}
+               variants={itemVars}
                className="lg:col-span-4 space-y-8"
             >
                <div className="p-10 rounded-[3rem] bg-gradient-to-br from-indigo-600/10 to-transparent border border-white/10 relative overflow-hidden group">
@@ -205,10 +225,9 @@ const Profile = () => {
 
           </div>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+    </motion.main>
+    <Footer />
+  </motion.div>
   );
 };
 

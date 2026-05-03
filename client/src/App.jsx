@@ -1,7 +1,8 @@
-import { Routes, Route, BrowserRouter, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getCurrentUser } from "./services/api.js";
+import { AnimatePresence } from "motion/react";
 
 import Home from "./pages/Home.jsx";
 import Auth from "./pages/Auth.jsx";
@@ -16,6 +17,7 @@ import Profile from "./pages/Profile.jsx";
 
 const App = () => {
   const dispatch = useDispatch();
+  const location = useLocation();
   const { userData } = useSelector((state) => state.user);
 
   useEffect(() => {
@@ -23,8 +25,8 @@ const App = () => {
   }, [dispatch]);
 
   return (
-    <BrowserRouter>
-      <Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
         {/* Default: / -> /auth (agar logged out), / -> /home (agar logged in) */}
         <Route
           path="/"
@@ -49,7 +51,7 @@ const App = () => {
         {/* Koi bhi unknown route -> /auth */}
         <Route path="*" element={<Navigate to="/auth" />} />
       </Routes>
-    </BrowserRouter>
+    </AnimatePresence>
   );
 };
 export default App;

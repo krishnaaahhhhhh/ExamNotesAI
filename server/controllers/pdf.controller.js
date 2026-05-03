@@ -25,20 +25,21 @@ exports.downloadPDF = async (req, res) => {
         addDarkPage();
         doc.fillColor('#6366f1').fontSize(26).text("AI-GENERATED STUDY MODULE", 50, 60, { align: 'center', characterSpacing: 1 });
         doc.moveDown(0.5);
-        doc.fillColor('#ffffff').fontSize(22).text(notesData.metadata.topic.toUpperCase(), { align: 'center', bold: true });
-        doc.fillColor('#9ca3af').fontSize(10).text(`Difficulty: ${notesData.metadata.difficulty} | Mastery Level`, { align: 'center' });
+        doc.fillColor('#ffffff').fontSize(22).text((notesData.metadata?.topic || "Study Notes").toUpperCase(), { align: 'center', bold: true });
+        doc.fillColor('#9ca3af').fontSize(10).text(`Difficulty: ${notesData.metadata?.difficulty || "Expert"} | Mastery Level`, { align: 'center' });
         
         doc.moveDown(2);
         // Motivational Quote Box
         doc.rect(50, doc.y, 500, 60).fill('#111111').stroke('#6366f1');
-        doc.fillColor('#6366f1').fontSize(13).text(notesData.notes.content.split('\n')[0], 70, doc.y + 15, { width: 460, italic: true, align: 'center' });
+        const contentStr = typeof notesData.notes?.content === "string" ? notesData.notes.content : "";
+        doc.fillColor('#6366f1').fontSize(13).text(contentStr.split('\n')[0] || "Knowledge is Power", 70, doc.y + 15, { width: 460, italic: true, align: 'center' });
         
         doc.moveDown(4);
         // Notes Section Header
         doc.fillColor('#6366f1').fontSize(18).text("Detailed Notes", 50, doc.y);
         doc.rect(50, doc.y + 5, 120, 2).fill('#6366f1');
         doc.moveDown();
-        doc.fillColor('#d1d5db').fontSize(11).text(notesData.notes.content.replace(/^>.*?\n/, ""), { align: 'justify', lineGap: 5 });
+        doc.fillColor('#d1d5db').fontSize(11).text(contentStr.replace(/^>.*?\n/, "") || "No detailed notes available.", { align: 'justify', lineGap: 5 });
 
         // --- Page 2: Visuals & Logic ---
         doc.addPage();
@@ -50,11 +51,13 @@ exports.downloadPDF = async (req, res) => {
         doc.rect(50, doc.y, 500, 200).fill('#0f172a').stroke('#1e293b');
         doc.fillColor('#818cf8').fontSize(10).text("STRATEGIC FLOW DIAGRAM (Logic Tree)", 60, doc.y + 10);
         doc.moveDown();
-        doc.fillColor('#94a3b8').fontSize(9).text(notesData.visuals.mermaidData, { width: 480, lineGap: 3 });
+        
+        const mermaidStr = notesData.visuals?.mermaidData || (Array.isArray(notesData.visuals?.flowcharts) ? notesData.visuals.flowcharts[0] : "");
+        doc.fillColor('#94a3b8').fontSize(9).text(mermaidStr || "Diagram logic unavailable in text format.", { width: 480, lineGap: 3 });
         
         doc.moveDown(2);
         doc.fillColor('#ffffff').fontSize(12).text("Diagram Explanation:", { underline: true });
-        doc.fillColor('#9ca3af').fontSize(10).text(notesData.visuals.description);
+        doc.fillColor('#9ca3af').fontSize(10).text(notesData.visuals?.description || "Visual logic explanation.");
 
         // --- Page 3: Retentions & Exam Prep ---
         doc.addPage();
@@ -62,11 +65,13 @@ exports.downloadPDF = async (req, res) => {
         doc.fillColor('#6366f1').fontSize(18).text("Mnemonics & Flashcards", 50, 50);
         doc.moveDown();
         
-        notesData.mnemonics.slice(0, 5).forEach(m => {
-            doc.fillColor('#ffffff').fontSize(12).text(`• ${m.concept}`, { bold: true });
-            doc.fillColor('#9ca3af').fontSize(10).text(`Trick: ${m.trick}`);
-            doc.moveDown(0.5);
-        });
+        if (Array.isArray(notesData.mnemonics)) {
+            notesData.mnemonics.slice(0, 5).forEach(m => {
+                doc.fillColor('#ffffff').fontSize(12).text(`• ${m.concept || m.word || "Concept"}`, { bold: true });
+                doc.fillColor('#9ca3af').fontSize(10).text(`Trick: ${m.trick || m.meaning || "N/A"}`);
+                doc.moveDown(0.5);
+            });
+        }
 
         doc.moveDown(2);
         doc.fillColor('#6366f1').fontSize(18).text("Scholar's Academic Vault", 50, doc.y);

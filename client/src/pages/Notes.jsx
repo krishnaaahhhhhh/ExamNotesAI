@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import axiosInstance from "../utils/axiosInstance";
@@ -44,12 +44,12 @@ const MermaidChart = ({ chartData }) => {
     try {
       mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose", suppressError: true });
       const id = `mermaid-${Date.now()}`;
-      
+
       // Syntax validation check
       mermaid.parse(chartData).then(() => {
         mermaid.render(id, chartData).then(({ svg }) => setSvg(svg)).catch((e) => {
-           console.error("Mermaid Render Error:", e);
-           setSvg(""); // Fail silently
+          console.error("Mermaid Render Error:", e);
+          setSvg(""); // Fail silently
         });
       }).catch((e) => {
         console.warn("Invalid Mermaid Syntax Detected - Hiding Chart");
@@ -125,11 +125,37 @@ const Notes = () => {
     includeCharts: false,
   });
 
+  const [sourceMode, setSourceMode] = useState("topic"); // topic, video, pdf
+  const [videoUrl, setVideoUrl] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get("mode");
+    if (mode && ["topic", "video", "pdf"].includes(mode)) {
+      setSourceMode(mode);
+    }
+  }, []);
+
   const [loading, setLoading] = useState(false);
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
   const [downloading, setDownloading] = useState(false);
   const [notesData, setNotesData] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // Animation Variants
+  const containerVars = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1, delayChildren: 0.2 }
+    }
+  };
+
+  const itemVars = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 25 } }
+  };
 
   const LOADING_MESSAGES = [
     "Firing up Gemini 2.0 AI Engine...",
@@ -163,7 +189,7 @@ const Notes = () => {
     utterance.rate = 1.0;
     utterance.pitch = 1.1;
     utterance.onend = () => setIsPlaying(false);
-    
+
     setIsPlaying(true);
     window.speechSynthesis.speak(utterance);
   };
@@ -178,11 +204,32 @@ const Notes = () => {
   };
 
   const handleGenerate = async () => {
-    if (!formData.topic) return alert("Bhai, topic toh likho!");
+    if (sourceMode === "topic" && !formData.topic) return alert("Bhai, topic toh likho!");
+    if (sourceMode === "video" && !videoUrl) return alert("YouTube link kahan hai?");
+    if (sourceMode === "pdf" && !selectedFile) return alert("PDF file select karo!");
+
     setLoading(true);
     setNotesData(null);
     try {
-      const response = await axiosInstance.post("/api/notes/generate", formData);
+      let response;
+      if (sourceMode === "topic") {
+        response = await axiosInstance.post("/api/notes/generate", formData);
+      } else if (sourceMode === "video") {
+        response = await axiosInstance.post("/api/notes/video/generate", {
+          videoUrl,
+          classLevel: formData.classLevel,
+          examType: formData.examType
+        });
+      } else if (sourceMode === "pdf") {
+        const data = new FormData();
+        data.append("pdf", selectedFile);
+        data.append("classLevel", formData.classLevel);
+        data.append("examType", formData.examType);
+        response = await axiosInstance.post("/api/notes/pdf/generate", data, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+      }
+
       if (response.data.success) {
         setNotesData(response.data.notesContent);
         setTimeout(() => {
@@ -219,506 +266,606 @@ const Notes = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans flex flex-col selection:bg-indigo-500/30">
-      <Navbar />
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="min-h-screen bg-[#050505] text-white font-sans flex flex-col selection:bg-indigo-500/30 relative"
+    >
+      {/* --- 3D BACKGROUND MODEL (Paladins Book) --- */}
+      <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
+        <iframe
+          title="Paladins book"
+          frameBorder="0"
+          allowFullScreen
+          allow="autoplay; fullscreen; xr-spatial-tracking"
+          src="https://sketchfab.com/models/07bc6364101c4bd4adaa3d0cee1aaa3e/embed?autostart=1&autospin=0.2&preload=1&transparent=1&ui_hint=0&ui_infos=0&ui_stop=0&ui_watermark=0&ui_theme=dark&dnt=1"
+          style={{
+            width: '100%',
+            height: '100vh',
+            border: '0',
+            filter: 'brightness(0.6) contrast(1.1) hue-rotate(15deg) saturate(1.1)',
+          }}
+        ></iframe>
+        {/* Dark Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050505] via-transparent to-[#050505] pointer-events-none" />
+      </div>
 
-      <main className="flex-grow px-6 py-20 relative">
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-indigo-600/20 blur-[120px] rounded-full -z-10" />
+      <div className="relative z-10">
+        <Navbar />
 
-        <div className="max-w-4xl mx-auto w-full">
-          {/* Header */}
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-16">
-            <span className="inline-block py-1 px-4 rounded-full bg-white/5 border border-white/10 text-xs font-bold tracking-widest uppercase mb-4 text-indigo-400">
-              AI-Powered Study Engine
-            </span>
-            <h2 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 bg-gradient-to-b from-white to-gray-500 bg-clip-text text-transparent">
-              Elevate Your <span className="text-indigo-500">Learning</span>
-            </h2>
-          </motion.div>
+        <motion.main
+          variants={containerVars}
+          initial="hidden"
+          animate="show"
+          className="flex-grow px-6 py-20 relative"
+        >
+          {/* Neural Scanning Animation (Loading State) */}
+          <AnimatePresence>
+            {loading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 pointer-events-none overflow-hidden"
+              >
+                <motion.div
+                  animate={{ top: ["0%", "100%", "0%"] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                  className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent blur-md shadow-[0_0_20px_rgba(79,70,229,0.5)] opacity-50"
+                />
+                <motion.div
+                  animate={{ top: ["0%", "100%", "0%"] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "linear", delay: 0.1 }}
+                  className="absolute left-0 right-0 h-px bg-white/20 opacity-20"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* Dashboard Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-            <motion.div whileHover={{ y: -5 }} className="bg-white/[0.03] backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/10 relative overflow-hidden">
-              <div className="relative z-10">
-                <span className="text-indigo-400 text-3xl">✨</span>
-                <h3 className="text-2xl font-black mt-4 text-white">Create New Notes</h3>
-                <p className="text-gray-500 text-sm mt-2 font-medium">Fill the details below to conjure expert-level academic modules in seconds.</p>
-              </div>
-              <div className="absolute -top-10 -right-10 w-24 h-24 bg-indigo-500/10 blur-2xl rounded-full" />
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-indigo-600/20 blur-[120px] rounded-full -z-10" />
+
+          <div className="max-w-4xl mx-auto w-full">
+            {/* Header */}
+            <motion.div variants={itemVars} className="text-center mb-16">
+              <span className="inline-block py-1 px-4 rounded-full bg-white/5 border border-white/10 text-xs font-bold tracking-widest uppercase mb-4 text-indigo-400">
+                AI-Powered Study Engine
+              </span>
+              <h2 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 bg-gradient-to-b from-white to-gray-500 bg-clip-text text-transparent">
+                Elevate Your <span className="text-indigo-500">Learning</span>
+              </h2>
             </motion.div>
 
-            <motion.div
-              whileHover={{ y: -5, scale: 1.02 }}
-              onClick={() => (window.location.href = "/my-notes")}
-              className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/10 cursor-pointer group relative overflow-hidden"
-            >
-              <div className="relative z-10 flex flex-col h-full justify-between">
-                <div>
-                  <span className="text-indigo-400 text-3xl">🗂️</span>
-                  <h3 className="text-2xl font-black mt-4 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">My Study Vault</h3>
-                  <p className="text-gray-500 text-sm mt-2 font-medium">Aapke saare "God-Level" notes yahan safe hain.</p>
+            {/* Dashboard Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+              <motion.div variants={itemVars} whileHover={{ y: -5 }} className="bg-transparent rounded-[2.5rem] p-8 border border-white/10 relative overflow-hidden">
+                <div className="relative z-10">
+                  <span className="text-indigo-400 text-3xl">✨</span>
+                  <h3 className="text-2xl font-black mt-4 text-white">Create New Notes</h3>
+                  <p className="text-gray-500 text-sm mt-2 font-medium">Fill the details below to conjure expert-level academic modules in seconds.</p>
                 </div>
-                <div className="mt-8 flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-widest">
-                  View Archive <span className="group-hover:translate-x-2 transition-transform">→</span>
+              </motion.div>
+
+              <motion.div
+                variants={itemVars}
+                whileHover={{ y: -5, scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.02)" }}
+                onClick={() => (window.location.href = "/my-notes")}
+                className="bg-transparent rounded-[2.5rem] p-8 border border-white/10 cursor-pointer group relative overflow-hidden"
+              >
+                <div className="relative z-10 flex flex-col h-full justify-between">
+                  <div>
+                    <span className="text-indigo-400 text-3xl">🗂️</span>
+                    <h3 className="text-2xl font-black mt-4 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">My Study Vault</h3>
+                    <p className="text-gray-500 text-sm mt-2 font-medium">Aapke saare "God-Level" notes yahan safe hain.</p>
+                  </div>
+                  <div className="mt-8 flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-widest">
+                    View Archive <span className="group-hover:translate-x-2 transition-transform">→</span>
+                  </div>
                 </div>
+              </motion.div>
+            </div>
+
+            {/* Mode Selector */}
+            <div className="flex justify-center gap-4 mb-12">
+              <ModeButton icon={<FaBoltLightning />} label="Topic" active={sourceMode === "topic"} onClick={() => setSourceMode("topic")} />
+              <ModeButton icon={<FaYoutube />} label="Video" active={sourceMode === "video"} onClick={() => setSourceMode("video")} />
+              <ModeButton icon={<FaMicroscope />} label="PDF" active={sourceMode === "pdf"} onClick={() => setSourceMode("pdf")} />
+            </div>
+
+            {/* Form Card */}
+            <motion.div variants={itemVars} className="bg-transparent rounded-[3rem] p-8 md:p-14 border border-white/10 shadow-2xl relative">
+              <div className="space-y-8 relative z-10">
+                {sourceMode === "topic" && (
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-4">Target Topic</label>
+                    <input
+                      type="text" name="topic" placeholder="e.g. Frontend Core Concepts"
+                      value={formData.topic} onChange={handleInputChange}
+                      className="w-full bg-white/[0.05] border border-white/10 rounded-2xl px-8 py-6 text-xl outline-none focus:border-indigo-500/50 transition-all"
+                    />
+                  </div>
+                )}
+
+                {sourceMode === "video" && (
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 ml-4 flex items-center gap-2"><FaYoutube /> YouTube Video URL</label>
+                    <input
+                      type="text" placeholder="https://www.youtube.com/watch?v=..."
+                      value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)}
+                      className="w-full bg-indigo-500/5 border border-indigo-500/20 rounded-2xl px-8 py-6 text-xl outline-none focus:border-indigo-500 transition-all text-indigo-200 placeholder:text-indigo-500/20"
+                    />
+                    <p className="text-[10px] text-gray-600 ml-4 italic">*AI will analyze video captions for exam engineering.</p>
+                  </div>
+                )}
+
+                {sourceMode === "pdf" && (
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400 ml-4 flex items-center gap-2"><FaMicroscope /> Upload Syllabus/PDF</label>
+                    <div className="relative group">
+                      <input
+                        type="file" accept=".pdf"
+                        onChange={(e) => setSelectedFile(e.target.files[0])}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      />
+                      <div className="w-full bg-emerald-500/5 border-2 border-dashed border-emerald-500/20 rounded-2xl px-8 py-10 flex flex-col items-center justify-center gap-4 group-hover:border-emerald-500/50 transition-all">
+                        <FaMicroscope className="text-4xl text-emerald-500/30 group-hover:text-emerald-500 transition-colors" />
+                        <p className="text-emerald-500/60 font-bold">{selectedFile ? selectedFile.name : "Drag & Drop or Click to Upload PDF"}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <InputGroup label="Academic Level" name="classLevel" value={formData.classLevel} onChange={handleInputChange} />
+                  <InputGroup label="Exam Category" name="examType" value={formData.examType} onChange={handleInputChange} />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 py-8 border-y border-white/5">
+                  <ToggleButton label="Revision Mode" active={formData.revisionMode} onClick={() => handleToggle("revisionMode")} />
+                  <ToggleButton label="AI Diagrams" active={formData.includeDiagram} onClick={() => handleToggle("includeDiagram")} />
+                  <ToggleButton label="Smart Charts" active={formData.includeCharts} onClick={() => handleToggle("includeCharts")} />
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={handleGenerate} disabled={loading}
+                  className="w-full py-6 bg-white text-black font-black text-xl rounded-2xl disabled:opacity-50 relative overflow-hidden group"
+                >
+                  {loading ? (
+                    <motion.div
+                      key={loadingMsgIdx}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute inset-0 flex items-center justify-center font-bold text-lg"
+                    >
+                      {LOADING_MESSAGES[loadingMsgIdx]} <span className="animate-pulse ml-2 text-indigo-500">⏳</span>
+                    </motion.div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <span>Generate AI Notes 🧠</span>
+                      <span className="text-[10px] opacity-50 font-normal tracking-normal uppercase">
+                        Costs {sourceMode === "topic" ? "10" : sourceMode === "video" ? "15" : "20"} Credits
+                      </span>
+                    </div>
+                  )}
+                </motion.button>
               </div>
-              <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-indigo-500/20 blur-3xl rounded-full group-hover:bg-indigo-500/40 transition-all" />
             </motion.div>
           </div>
 
-          {/* Form Card */}
-          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="bg-white/[0.03] backdrop-blur-xl rounded-[3rem] p-8 md:p-14 border border-white/10 shadow-2xl relative">
-            <div className="space-y-8 relative z-10">
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-4">Target Topic</label>
-                <input
-                  type="text" name="topic" placeholder="e.g. Frontend Core Concepts"
-                  value={formData.topic} onChange={handleInputChange}
-                  className="w-full bg-white/[0.05] border border-white/10 rounded-2xl px-8 py-6 text-xl outline-none focus:border-indigo-500/50 transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <InputGroup label="Academic Level" name="classLevel" value={formData.classLevel} onChange={handleInputChange} />
-                <InputGroup label="Exam Category" name="examType" value={formData.examType} onChange={handleInputChange} />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 py-8 border-y border-white/5">
-                <ToggleButton label="Revision Mode" active={formData.revisionMode} onClick={() => handleToggle("revisionMode")} />
-                <ToggleButton label="AI Diagrams" active={formData.includeDiagram} onClick={() => handleToggle("includeDiagram")} />
-                <ToggleButton label="Smart Charts" active={formData.includeCharts} onClick={() => handleToggle("includeCharts")} />
-              </div>
-
-              <motion.button
-                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                onClick={handleGenerate} disabled={loading}
-                className="w-full py-6 bg-white text-black font-black text-xl rounded-2xl disabled:opacity-50 relative overflow-hidden group"
+          {/* Results Section */}
+          <AnimatePresence>
+            {notesData && (
+              <motion.div
+                variants={containerVars}
+                initial="hidden"
+                animate="show"
+                className="max-w-6xl mx-auto mt-32 space-y-12 pb-20"
               >
-                {loading ? (
-                   <motion.div
-                     key={loadingMsgIdx}
-                     initial={{ opacity: 0, y: 10 }}
-                     animate={{ opacity: 1, y: 0 }}
-                     exit={{ opacity: 0, y: -10 }}
-                     className="absolute inset-0 flex items-center justify-center font-bold text-lg"
-                   >
-                     {LOADING_MESSAGES[loadingMsgIdx]} <span className="animate-pulse ml-2 text-indigo-500">⏳</span>
-                   </motion.div>
-                ) : (
-                  "Generate AI Notes 🧠"
-                )}
-              </motion.button>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Results Section */}
-        <AnimatePresence>
-          {notesData && (
-            <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} className="max-w-6xl mx-auto mt-32 space-y-12 pb-20">
-              {/* Header */}
-              <div className="text-center">
-                <h3 className="text-4xl font-black mb-4">
-                  Study Material for <span className="text-indigo-500">{notesData.metadata?.topic}</span>
-                </h3>
-                <div className="flex flex-wrap justify-center items-center gap-4">
-                  <span className="bg-indigo-500/20 text-indigo-400 px-4 py-1 rounded-full text-sm font-bold border border-indigo-500/30">
-                    Difficulty: {notesData.metadata?.difficulty}
-                  </span>
-                  <span className="bg-purple-500/20 text-purple-400 px-4 py-1 rounded-full text-sm font-bold border border-purple-500/30">
-                    Time: {notesData.metadata?.studyTime}
-                  </span>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                    onClick={handleDownloadPDF} disabled={downloading}
-                    className="bg-white text-black px-6 py-1.5 rounded-full text-sm font-black uppercase tracking-tighter flex items-center gap-2 hover:bg-indigo-500 hover:text-white transition-all disabled:opacity-50"
-                  >
-                    {downloading ? "Preparing..." : "Download PDF 📥"}
-                  </motion.button>
-                </div>
-              </div>
-
-              {/* 🔥 PIE + BAR CHARTS SECTION */}
-              {(notesData.metadata?.pieChartData || notesData.metadata?.barGraphData) && (
-                <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="h-px flex-1 bg-white/5" />
-                    <span className="text-xs font-black uppercase tracking-widest text-indigo-400">📊 Exam Analytics</span>
-                    <div className="h-px flex-1 bg-white/5" />
+                {/* Header */}
+                <div className="text-center">
+                  <h3 className="text-4xl font-black mb-4">
+                    Study Material for <span className="text-indigo-500">{notesData.metadata?.topic}</span>
+                  </h3>
+                  <div className="flex flex-wrap justify-center items-center gap-4">
+                    <span className="bg-indigo-500/20 text-indigo-400 px-4 py-1 rounded-full text-sm font-bold border border-indigo-500/30">
+                      Difficulty: {notesData.metadata?.difficulty}
+                    </span>
+                    <span className="bg-purple-500/20 text-purple-400 px-4 py-1 rounded-full text-sm font-bold border border-purple-500/30">
+                      Time: {notesData.metadata?.studyTime}
+                    </span>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                      onClick={handleDownloadPDF} disabled={downloading}
+                      className="bg-white text-black px-6 py-1.5 rounded-full text-sm font-black uppercase tracking-tighter flex items-center gap-2 hover:bg-indigo-500 hover:text-white transition-all disabled:opacity-50"
+                    >
+                      {downloading ? "Preparing..." : "Download PDF 📥"}
+                    </motion.button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <ExamPieChart data={notesData.metadata.pieChartData} />
-                    <ExamBarChart data={notesData.metadata.barGraphData} />
-                  </div>
-                </motion.div>
-              )}
-
-              {/* ----- NEW ADVANCED AI BLOCKS ----- */}
-              <div className="space-y-6">
-                {/* Cheat Sheet & Real World side-by-side */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {notesData.cheatSheet && (
-                    <section className="bg-orange-500/5 border border-orange-500/20 p-8 rounded-[2.5rem]">
-                      <div className="flex items-center gap-3 text-orange-400 mb-6 font-black text-sm uppercase tracking-widest"><FaBoltLightning /> Cheat Sheet</div>
-                      <div className="flex flex-wrap gap-3">
-                        {notesData.cheatSheet.map((item, idx) => (
-                          <span key={idx} className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-300 font-mono text-xs shadow-inner">{item}</span>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-                  {notesData.realWorldApplication && (
-                    <section className="bg-emerald-500/5 border border-emerald-500/20 p-8 rounded-[2.5rem] relative overflow-hidden">
-                      <FaGlobe className="absolute -bottom-6 -right-6 text-8xl text-emerald-500/10 pointer-events-none" />
-                      <div className="flex items-center gap-3 text-emerald-400 mb-4 font-black text-sm uppercase tracking-widest">Why Learn This?</div>
-                      <p className="text-gray-300 text-sm leading-relaxed relative z-10 italic">{notesData.realWorldApplication}</p>
-                    </section>
-                  )}
                 </div>
-              </div>
 
-              {/* MAIN CONTENT */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
-                  {/* Detailed Notes */}
-                  <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem] backdrop-blur-md relative group">
-                    <CopyButton text={typeof notesData.notes?.content === "string" ? notesData.notes.content : JSON.stringify(notesData.notes?.content)} />
-                    <h4 className="text-2xl font-bold mb-6 text-indigo-400">Detailed Notes</h4>
-                    <div className="markdown-body text-gray-300 leading-relaxed text-lg">
-                      {typeof notesData.notes?.content === "string" ? (
-                        <ReactMarkdown components={{
-                          h1: ({node, ...props}) => <h1 className="text-3xl font-black text-white mb-6 mt-8 uppercase tracking-tighter" {...props} />,
-                          h2: ({node, ...props}) => <h2 className="text-2xl font-bold text-indigo-300 mb-4 mt-8" {...props} />,
-                          h3: ({node, ...props}) => <h3 className="text-xl font-bold text-white mb-3 mt-6 border-b border-white/10 pb-2" {...props} />,
-                          p: ({node, ...props}) => <p className="mb-6" {...props} />,
-                          ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-6 space-y-3 marker:text-indigo-500" {...props} />,
-                          ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-6 space-y-3 marker:text-indigo-500" {...props} />,
-                          li: ({node, ...props}) => <li {...props} />,
-                          strong: ({node, ...props}) => <strong className="font-black text-white bg-indigo-500/20 px-1.5 py-0.5 rounded" {...props} />,
-                          blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-indigo-500 pl-6 py-2 italic bg-white/5 rounded-r-2xl my-6" {...props} />,
-                          code: ({node, inline, ...props}) => inline ? <code className="bg-white/10 text-pink-400 px-1.5 py-0.5 rounded text-sm font-mono border border-white/10" {...props} /> : <div className="bg-[#080808] p-6 rounded-2xl overflow-x-auto border border-white/10 my-6 text-sm font-mono shadow-inner"><code {...props} /></div>,
-                        }}>
-                          {notesData.notes.content}
-                        </ReactMarkdown>
-                      ) : (
-                        <pre className="whitespace-pre-wrap">{JSON.stringify(notesData.notes?.content, null, 2)}</pre>
-                      )}
+                {/* 🔥 PIE + BAR CHARTS SECTION */}
+                {(notesData.metadata?.pieChartData || notesData.metadata?.barGraphData) && (
+                  <motion.div variants={itemVars}>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="h-px flex-1 bg-white/5" />
+                      <span className="text-xs font-black uppercase tracking-widest text-indigo-400">📊 Exam Analytics</span>
+                      <div className="h-px flex-1 bg-white/5" />
                     </div>
-                  </section>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <ExamPieChart data={notesData.metadata.pieChartData} />
+                      <ExamBarChart data={notesData.metadata.barGraphData} />
+                    </div>
+                  </motion.div>
+                )}
 
-                  {/* Visual Flowcharts */}
-                  {(notesData.visuals?.flowcharts || notesData.visuals?.mermaidData) && (
-                    <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem]">
-                      <h4 className="text-2xl font-bold mb-6 text-indigo-400">🔀 Visual Logic Systems</h4>
-                      <div className="space-y-6">
-                        {Array.isArray(notesData.visuals.flowcharts) ? (
-                          notesData.visuals.flowcharts.map((chart, idx) => (
-                            <div key={idx} className="space-y-2">
-                              {notesData.visuals.flowcharts.length > 1 && <p className="text-[9px] font-black uppercase tracking-widest text-indigo-500/50 ml-2">Diagram {idx + 1}</p>}
-                              <MermaidChart chartData={chart} />
-                            </div>
-                          ))
+                {/* ----- NEW ADVANCED AI BLOCKS ----- */}
+                <div className="space-y-6">
+                  {/* Cheat Sheet & Real World side-by-side */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {notesData.cheatSheet && (
+                      <section className="bg-orange-500/5 border border-orange-500/20 p-8 rounded-[2.5rem]">
+                        <div className="flex items-center gap-3 text-orange-400 mb-6 font-black text-sm uppercase tracking-widest"><FaBoltLightning /> Cheat Sheet</div>
+                        <div className="flex flex-wrap gap-3">
+                          {notesData.cheatSheet.map((item, idx) => (
+                            <span key={idx} className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-300 font-mono text-xs shadow-inner">{item}</span>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                    {notesData.realWorldApplication && (
+                      <section className="bg-emerald-500/5 border border-emerald-500/20 p-8 rounded-[2.5rem] relative overflow-hidden">
+                        <FaGlobe className="absolute -bottom-6 -right-6 text-8xl text-emerald-500/10 pointer-events-none" />
+                        <div className="flex items-center gap-3 text-emerald-400 mb-4 font-black text-sm uppercase tracking-widest">Why Learn This?</div>
+                        <p className="text-gray-300 text-sm leading-relaxed relative z-10 italic">{notesData.realWorldApplication}</p>
+                      </section>
+                    )}
+                  </div>
+                </div>
+
+                {/* MAIN CONTENT */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="lg:col-span-2 space-y-8">
+                    {/* Detailed Notes */}
+                    <section className="bg-transparent border border-white/10 p-10 rounded-[2.5rem] relative group">
+                      <CopyButton text={typeof notesData.notes?.content === "string" ? notesData.notes.content : JSON.stringify(notesData.notes?.content)} />
+                      <h4 className="text-2xl font-bold mb-6 text-indigo-400">Detailed Notes</h4>
+                      <div className="markdown-body text-gray-300 leading-relaxed text-lg">
+                        {typeof notesData.notes?.content === "string" ? (
+                          <ReactMarkdown components={{
+                            h1: ({ node, ...props }) => <h1 className="text-3xl font-black text-white mb-6 mt-8 uppercase tracking-tighter" {...props} />,
+                            h2: ({ node, ...props }) => <h2 className="text-2xl font-bold text-indigo-300 mb-4 mt-8" {...props} />,
+                            h3: ({ node, ...props }) => <h3 className="text-xl font-bold text-white mb-3 mt-6 border-b border-white/10 pb-2" {...props} />,
+                            p: ({ node, ...props }) => <p className="mb-6" {...props} />,
+                            ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-6 space-y-3 marker:text-indigo-500" {...props} />,
+                            ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-6 space-y-3 marker:text-indigo-500" {...props} />,
+                            li: ({ node, ...props }) => <li {...props} />,
+                            strong: ({ node, ...props }) => <strong className="font-black text-white bg-indigo-500/20 px-1.5 py-0.5 rounded" {...props} />,
+                            blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-indigo-500 pl-6 py-2 italic bg-white/5 rounded-r-2xl my-6" {...props} />,
+                            code: ({ node, inline, ...props }) => inline ? <code className="bg-white/10 text-pink-400 px-1.5 py-0.5 rounded text-sm font-mono border border-white/10" {...props} /> : <div className="bg-[#080808] p-6 rounded-2xl overflow-x-auto border border-white/10 my-6 text-sm font-mono shadow-inner"><code {...props} /></div>,
+                          }}>
+                            {notesData.notes.content}
+                          </ReactMarkdown>
                         ) : (
-                          <MermaidChart chartData={notesData.visuals.mermaidData} />
+                          <pre className="whitespace-pre-wrap">{JSON.stringify(notesData.notes?.content, null, 2)}</pre>
                         )}
                       </div>
                     </section>
-                  )}
 
-                  {/* Sub-Topics */}
-                  {notesData.subTopics && (
-                    <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem]">
-                      <h4 className="text-2xl font-bold mb-8 text-purple-400">🗂️ Sub-Topics Breakdown</h4>
-                      <div className="space-y-6">
-                        {Object.entries(notesData.subTopics).map(([key, items]) => (
-                          <div key={key}>
-                            <p className="text-xs font-black uppercase tracking-widest text-gray-500 mb-3">{key.replace(/([A-Z])/g, " $1")}</p>
-                            <div className="flex flex-wrap gap-2">
-                              {Array.isArray(items)
-                                ? items.map((item, i) => (
-                                  <span key={i} className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-sm text-gray-300 font-medium hover:bg-indigo-500/10 hover:border-indigo-500/30 transition-all">
-                                    {typeof item === "string" ? item : JSON.stringify(item)}
-                                  </span>
-                                ))
-                                : <span className="text-gray-400 text-sm">{typeof items === "string" ? items : JSON.stringify(items)}</span>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-                </div>
-
-                {/* Right Sidebar */}
-                <div className="space-y-8">
-                  {/* Mnemonics */}
-                  <div className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-white/10 p-8 rounded-[2rem]">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-6">🧠 Mnemonics</h4>
-                    {Array.isArray(notesData.mnemonics)
-                      ? notesData.mnemonics.slice(0, 6).map((m, i) => (
-                        <div key={i} className="mb-6 last:mb-0">
-                          <p className="text-sm font-bold text-white">{m.concept || m.word}</p>
-                          <p className="text-xs text-gray-400 mt-1">{m.trick || m.meaning}</p>
+                    {/* Visual Flowcharts */}
+                    {(notesData.visuals?.flowcharts || notesData.visuals?.mermaidData) && (
+                      <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem]">
+                        <h4 className="text-2xl font-bold mb-6 text-indigo-400">🔀 Visual Logic Systems</h4>
+                        <div className="space-y-6">
+                          {Array.isArray(notesData.visuals.flowcharts) ? (
+                            notesData.visuals.flowcharts.map((chart, idx) => (
+                              <div key={idx} className="space-y-2">
+                                {notesData.visuals.flowcharts.length > 1 && <p className="text-[9px] font-black uppercase tracking-widest text-indigo-500/50 ml-2">Diagram {idx + 1}</p>}
+                                <MermaidChart chartData={chart} />
+                              </div>
+                            ))
+                          ) : (
+                            <MermaidChart chartData={notesData.visuals.mermaidData} />
+                          )}
                         </div>
-                      ))
-                      : null}
+                      </section>
+                    )}
+
+                    {/* Sub-Topics */}
+                    {notesData.subTopics && (
+                      <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem]">
+                        <h4 className="text-2xl font-bold mb-8 text-purple-400">🗂️ Sub-Topics Breakdown</h4>
+                        <div className="space-y-6">
+                          {Object.entries(notesData.subTopics).map(([key, items]) => (
+                            <div key={key}>
+                              <p className="text-xs font-black uppercase tracking-widest text-gray-500 mb-3">{key.replace(/([A-Z])/g, " $1")}</p>
+                              <div className="flex flex-wrap gap-2">
+                                {Array.isArray(items)
+                                  ? items.map((item, i) => (
+                                    <span key={i} className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-sm text-gray-300 font-medium hover:bg-indigo-500/10 hover:border-indigo-500/30 transition-all">
+                                      {typeof item === "string" ? item : JSON.stringify(item)}
+                                    </span>
+                                  ))
+                                  : <span className="text-gray-400 text-sm">{typeof items === "string" ? items : JSON.stringify(items)}</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
                   </div>
 
-                  {/* Flashcards (3D Interactive) */}
-                  <div className="bg-transparent">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-emerald-400 mb-6 flex items-center justify-between">
-                      <span>⚡ Flashcards</span>
-                      <span className="text-emerald-500/50 text-[10px]">Click to flip</span>
-                    </h4>
-                    {Array.isArray(notesData.flashcards)
-                      ? notesData.flashcards.slice(0, 5).map((f, i) => (
+                  {/* Right Sidebar */}
+                  <div className="space-y-8">
+                    {/* Mnemonics */}
+                    <div className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-white/10 p-8 rounded-[2rem]">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-6">🧠 Mnemonics</h4>
+                      {Array.isArray(notesData.mnemonics)
+                        ? notesData.mnemonics.slice(0, 6).map((m, i) => (
+                          <div key={i} className="mb-6 last:mb-0">
+                            <p className="text-sm font-bold text-white">{m.concept || m.word}</p>
+                            <p className="text-xs text-gray-400 mt-1">{m.trick || m.meaning}</p>
+                          </div>
+                        ))
+                        : null}
+                    </div>
+
+                    {/* Flashcards (3D Interactive) */}
+                    <div className="bg-transparent">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-emerald-400 mb-6 flex items-center justify-between">
+                        <span>⚡ Flashcards</span>
+                        <span className="text-emerald-500/50 text-[10px]">Click to flip</span>
+                      </h4>
+                      {Array.isArray(notesData.flashcards)
+                        ? notesData.flashcards.slice(0, 5).map((f, i) => (
                           <div key={i} className="mb-4">
                             <InteractiveFlashcard question={f.front || f.question || "No Question"} answer={f.back || f.answer || "No Answer"} />
                           </div>
                         ))
-                      : null}
+                        : null}
+                    </div>
+
+                    {/* Topper Insights */}
+                    {notesData.topperInsights && (
+                      <div className="bg-gradient-to-br from-yellow-500/10 to-transparent border border-yellow-500/20 p-8 rounded-[2rem]">
+                        <h4 className="text-xs font-black uppercase tracking-widest text-yellow-400 mb-4">🏆 Topper Insights</h4>
+                        <p className="text-sm text-gray-300 leading-relaxed">{notesData.topperInsights}</p>
+                      </div>
+                    )}
+
+                    {/* Case Study */}
+                    {notesData.caseStudy && (
+                      <div className="bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20 p-8 rounded-[2rem]">
+                        <h4 className="text-xs font-black uppercase tracking-widest text-emerald-400 mb-4">🧪 Case Study</h4>
+                        <p className="text-sm text-gray-300 leading-relaxed">{notesData.caseStudy}</p>
+                      </div>
+                    )}
                   </div>
-
-                  {/* Topper Insights */}
-                  {notesData.topperInsights && (
-                    <div className="bg-gradient-to-br from-yellow-500/10 to-transparent border border-yellow-500/20 p-8 rounded-[2rem]">
-                      <h4 className="text-xs font-black uppercase tracking-widest text-yellow-400 mb-4">🏆 Topper Insights</h4>
-                      <p className="text-sm text-gray-300 leading-relaxed">{notesData.topperInsights}</p>
-                    </div>
-                  )}
-
-                  {/* Case Study */}
-                  {notesData.caseStudy && (
-                    <div className="bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20 p-8 rounded-[2rem]">
-                      <h4 className="text-xs font-black uppercase tracking-widest text-emerald-400 mb-4">🧪 Case Study</h4>
-                      <p className="text-sm text-gray-300 leading-relaxed">{notesData.caseStudy}</p>
-                    </div>
-                  )}
                 </div>
-              </div>
 
-              {/* Practice Section */}
-              {notesData.practice?.mcqs?.length > 0 && (
-                <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem]">
-                  <h4 className="text-2xl font-bold mb-8 text-emerald-400">🎯 Practice MCQs</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {notesData.practice.mcqs.slice(0, 6).map((mcq, i) => (
-                      <div key={i} className="bg-white/5 border border-white/10 p-6 rounded-2xl hover:border-emerald-500/30 transition-all">
-                        <p className="text-sm font-bold text-white mb-4">Q{i + 1}: {mcq.q || mcq.question}</p>
-                        <div className="space-y-2">
-                          {(mcq.options || []).map((opt, j) => (
-                            <div key={j} className={`text-xs px-3 py-2 rounded-lg font-medium transition-all ${opt === mcq.answer ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "text-gray-500 bg-white/5"}`}>
-                              {opt}
+                {/* Practice Section */}
+                {notesData.practice?.mcqs?.length > 0 && (
+                  <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem]">
+                    <h4 className="text-2xl font-bold mb-8 text-emerald-400">🎯 Practice MCQs</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {notesData.practice.mcqs.slice(0, 6).map((mcq, i) => (
+                        <div key={i} className="bg-white/5 border border-white/10 p-6 rounded-2xl hover:border-emerald-500/30 transition-all">
+                          <p className="text-sm font-bold text-white mb-4">Q{i + 1}: {mcq.q || mcq.question}</p>
+                          <div className="space-y-2">
+                            {(mcq.options || []).map((opt, j) => (
+                              <div key={j} className={`text-xs px-3 py-2 rounded-lg font-medium transition-all ${opt === mcq.answer ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "text-gray-500 bg-white/5"}`}>
+                                {opt}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Viva Questions */}
+                {notesData.vivaQuestions && Array.isArray(notesData.vivaQuestions) && (
+                  <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem]">
+                    <h4 className="text-2xl font-bold mb-8 text-emerald-400 flex items-center gap-3">
+                      <span className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-sm"><FaRegCircleQuestion /></span>
+                      Viva Voce Expert List
+                    </h4>
+                    <div className="grid grid-cols-1 gap-6">
+                      {notesData.vivaQuestions.map((viva, i) => (
+                        <div key={i} className="bg-white/5 border border-white/10 p-6 rounded-2xl hover:bg-white/[0.07] transition-all">
+                          <p className="text-sm font-black text-emerald-400 mb-2 uppercase tracking-widest">Question {i + 1}</p>
+                          <p className="text-lg font-bold text-white mb-4 italic leading-relaxed">"{viva.question}"</p>
+                          <div className="h-px bg-white/10 w-full mb-4" />
+                          <p className="text-[10px] font-black text-indigo-400 mb-2 uppercase tracking-widest">Ideal Answer</p>
+                          <p className="text-gray-300 text-sm leading-relaxed">{viva.answer}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* 6. Comparative Analysis (Differences) */}
+                {notesData.comparativeAnalysis && Array.isArray(notesData.comparativeAnalysis) && notesData.comparativeAnalysis.length > 0 && (
+                  <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem] overflow-x-auto text-left">
+                    <h4 className="text-2xl font-bold mb-8 text-indigo-400 flex items-center gap-3">
+                      <FaScaleBalanced /> Comparative Analysis
+                    </h4>
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-white/10">
+                          <th className="py-4 px-6 text-xs font-black uppercase tracking-widest text-gray-500">Feature</th>
+                          <th className="py-4 px-6 text-indigo-300 font-bold italic">Item A</th>
+                          <th className="py-4 px-6 text-emerald-300 font-bold italic">Item B</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {notesData.comparativeAnalysis.map((row, i) => (
+                          <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                            <td className="py-4 px-6 text-sm font-bold text-gray-300">{row.feature}</td>
+                            <td className="py-4 px-6 text-sm text-gray-400">{row.item1}</td>
+                            <td className="py-4 px-6 text-sm text-gray-400">{row.item2}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </section>
+                )}
+
+                {/* 7. Formula & Theorem Bank */}
+                {notesData.formulaTheoremBank && Array.isArray(notesData.formulaTheoremBank) && notesData.formulaTheoremBank.length > 0 && (
+                  <section className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                    {notesData.formulaTheoremBank.map((f, i) => (
+                      <div key={i} className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-white/10 p-8 rounded-3xl relative overflow-hidden group">
+                        <FaCalculator className="absolute -bottom-4 -right-4 text-7xl text-indigo-500/10 group-hover:scale-110 transition-transform" />
+                        <h5 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-4">{f.title}</h5>
+                        <div className="bg-black/40 p-4 rounded-xl border border-white/5 mb-4 font-mono text-center text-lg text-white shadow-inner">
+                          {f.formula}
+                        </div>
+                        <p className="text-sm text-gray-400 leading-relaxed">{f.description}</p>
+                      </div>
+                    ))}
+                  </section>
+                )}
+
+                {/* 8. Step-by-Step Derivations */}
+                {notesData.stepByStepDerivations && Array.isArray(notesData.stepByStepDerivations) && notesData.stepByStepDerivations.length > 0 && (
+                  <section className="space-y-8 text-left">
+                    {notesData.stepByStepDerivations.map((d, i) => (
+                      <div key={i} className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem]">
+                        <h4 className="text-xl font-bold mb-8 text-indigo-300 flex items-center gap-3">
+                          <FaArrowTrendUp /> {d.title}
+                        </h4>
+                        <div className="space-y-6">
+                          {d.steps.map((step, idx) => (
+                            <div key={idx} className="flex gap-6">
+                              <div className="flex flex-col items-center">
+                                <div className="w-8 h-8 rounded-full bg-indigo-500 text-black font-black flex items-center justify-center text-xs shrink-0">
+                                  {idx + 1}
+                                </div>
+                                {idx !== d.steps.length - 1 && <div className="w-0.5 grow bg-indigo-500/20 my-2" />}
+                              </div>
+                              <p className="text-gray-300 text-lg leading-relaxed pt-1">{step}</p>
                             </div>
                           ))}
                         </div>
                       </div>
                     ))}
-                  </div>
-                </section>
-              )}
+                  </section>
+                )}
 
-              {/* Viva Questions */}
-              {notesData.vivaQuestions && Array.isArray(notesData.vivaQuestions) && (
-                <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem]">
-                  <h4 className="text-2xl font-bold mb-8 text-emerald-400 flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-sm"><FaRegCircleQuestion /></span>
-                    Viva Voce Expert List
-                  </h4>
-                  <div className="grid grid-cols-1 gap-6">
-                    {notesData.vivaQuestions.map((viva, i) => (
-                      <div key={i} className="bg-white/5 border border-white/10 p-6 rounded-2xl hover:bg-white/[0.07] transition-all">
-                        <p className="text-sm font-black text-emerald-400 mb-2 uppercase tracking-widest">Question {i + 1}</p>
-                        <p className="text-lg font-bold text-white mb-4 italic leading-relaxed">"{viva.question}"</p>
-                        <div className="h-px bg-white/10 w-full mb-4" />
-                        <p className="text-[10px] font-black text-indigo-400 mb-2 uppercase tracking-widest">Ideal Answer</p>
-                        <p className="text-gray-300 text-sm leading-relaxed">{viva.answer}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* 6. Comparative Analysis (Differences) */}
-              {notesData.comparativeAnalysis && Array.isArray(notesData.comparativeAnalysis) && notesData.comparativeAnalysis.length > 0 && (
-                <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem] overflow-x-auto text-left">
-                  <h4 className="text-2xl font-bold mb-8 text-indigo-400 flex items-center gap-3">
-                    <FaScaleBalanced /> Comparative Analysis
-                  </h4>
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-white/10">
-                        <th className="py-4 px-6 text-xs font-black uppercase tracking-widest text-gray-500">Feature</th>
-                        <th className="py-4 px-6 text-indigo-300 font-bold italic">Item A</th>
-                        <th className="py-4 px-6 text-emerald-300 font-bold italic">Item B</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {notesData.comparativeAnalysis.map((row, i) => (
-                        <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                          <td className="py-4 px-6 text-sm font-bold text-gray-300">{row.feature}</td>
-                          <td className="py-4 px-6 text-sm text-gray-400">{row.item1}</td>
-                          <td className="py-4 px-6 text-sm text-gray-400">{row.item2}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </section>
-              )}
-
-              {/* 7. Formula & Theorem Bank */}
-              {notesData.formulaTheoremBank && Array.isArray(notesData.formulaTheoremBank) && notesData.formulaTheoremBank.length > 0 && (
-                <section className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                  {notesData.formulaTheoremBank.map((f, i) => (
-                    <div key={i} className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-white/10 p-8 rounded-3xl relative overflow-hidden group">
-                      <FaCalculator className="absolute -bottom-4 -right-4 text-7xl text-indigo-500/10 group-hover:scale-110 transition-transform" />
-                      <h5 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-4">{f.title}</h5>
-                      <div className="bg-black/40 p-4 rounded-xl border border-white/5 mb-4 font-mono text-center text-lg text-white shadow-inner">
-                        {f.formula}
-                      </div>
-                      <p className="text-sm text-gray-400 leading-relaxed">{f.description}</p>
+                {/* 9. Scientific Definitions */}
+                {notesData.scientificDefinitions && Array.isArray(notesData.scientificDefinitions) && notesData.scientificDefinitions.length > 0 && (
+                  <section className="bg-emerald-500/5 border border-emerald-500/20 p-10 rounded-[2.5rem] relative overflow-hidden text-left">
+                    <FaQuoteLeft className="absolute top-8 left-8 text-6xl text-emerald-500/10" />
+                    <div className="flex items-center gap-3 text-emerald-400 mb-8 font-black text-sm uppercase tracking-widest relative z-10">
+                      Formal Scientific Definitions
                     </div>
-                  ))}
-                </section>
-              )}
+                    <div className="space-y-8 relative z-10">
+                      {notesData.scientificDefinitions.map((d, i) => (
+                        <div key={i} className="pl-12 border-l-2 border-emerald-500/30">
+                          <p className="text-emerald-400 font-bold mb-2 uppercase text-[10px] tracking-[0.2em]">{d.term}</p>
+                          <p className="text-gray-200 text-xl font-medium leading-relaxed italic">"{d.definition}"</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
 
-              {/* 8. Step-by-Step Derivations */}
-              {notesData.stepByStepDerivations && Array.isArray(notesData.stepByStepDerivations) && notesData.stepByStepDerivations.length > 0 && (
-                <section className="space-y-8 text-left">
-                  {notesData.stepByStepDerivations.map((d, i) => (
-                    <div key={i} className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem]">
-                      <h4 className="text-xl font-bold mb-8 text-indigo-300 flex items-center gap-3">
-                        <FaArrowTrendUp /> {d.title}
+                {/* 10. Predictive Marking Scheme */}
+                {notesData.markingScheme && Array.isArray(notesData.markingScheme) && notesData.markingScheme.length > 0 && (
+                  <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem] text-left">
+                    <h4 className="text-2xl font-bold mb-8 text-orange-400 flex items-center gap-3">
+                      <FaHighlighter /> Predictive Marking Scheme
+                    </h4>
+                    <div className="space-y-4">
+                      {notesData.markingScheme.map((s, i) => (
+                        <div key={i} className="flex items-center justify-between bg-white/5 border border-white/5 p-6 rounded-2xl">
+                          <div className="flex-1 pr-6">
+                            <p className="text-white font-bold mb-1">{s.component}</p>
+                            <p className="text-xs text-gray-500">{s.detail}</p>
+                          </div>
+                          <div className="shrink-0 bg-orange-500/20 text-orange-400 px-4 py-2 rounded-xl font-black text-sm border border-orange-500/30">
+                            +{s.marks} Marks
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* 11. Glossary & Historical Evolution */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
+                  {notesData.glossary && Array.isArray(notesData.glossary) && notesData.glossary.length > 0 && (
+                    <section className="bg-white/[0.02] border border-white/10 p-8 rounded-[2rem]">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-6 flex items-center gap-3">
+                        <FaLanguage /> Glossary
                       </h4>
-                      <div className="space-y-6">
-                        {d.steps.map((step, idx) => (
-                          <div key={idx} className="flex gap-6">
-                            <div className="flex flex-col items-center">
-                              <div className="w-8 h-8 rounded-full bg-indigo-500 text-black font-black flex items-center justify-center text-xs shrink-0">
-                                {idx + 1}
-                              </div>
-                              {idx !== d.steps.length - 1 && <div className="w-0.5 grow bg-indigo-500/20 my-2" />}
-                            </div>
-                            <p className="text-gray-300 text-lg leading-relaxed pt-1">{step}</p>
+                      <div className="space-y-4">
+                        {notesData.glossary.map((g, i) => (
+                          <div key={i}>
+                            <span className="text-indigo-300 font-bold text-sm block mb-1">{g.term}</span>
+                            <p className="text-xs text-gray-500 leading-relaxed">{g.definition}</p>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  ))}
-                </section>
-              )}
+                    </section>
+                  )}
+                  {notesData.historicalEvolution && (
+                    <section className="bg-indigo-500/5 border border-indigo-500/20 p-8 rounded-[2rem]">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-6 flex items-center gap-3">
+                        <FaClockRotateLeft /> Historical Evolution
+                      </h4>
+                      <p className="text-sm text-gray-400 leading-relaxed italic">
+                        {notesData.historicalEvolution}
+                      </p>
+                    </section>
+                  )}
+                </div>
 
-              {/* 9. Scientific Definitions */}
-              {notesData.scientificDefinitions && Array.isArray(notesData.scientificDefinitions) && notesData.scientificDefinitions.length > 0 && (
-                <section className="bg-emerald-500/5 border border-emerald-500/20 p-10 rounded-[2.5rem] relative overflow-hidden text-left">
-                   <FaQuoteLeft className="absolute top-8 left-8 text-6xl text-emerald-500/10" />
-                   <div className="flex items-center gap-3 text-emerald-400 mb-8 font-black text-sm uppercase tracking-widest relative z-10">
-                     Formal Scientific Definitions
-                   </div>
-                   <div className="space-y-8 relative z-10">
-                     {notesData.scientificDefinitions.map((d, i) => (
-                       <div key={i} className="pl-12 border-l-2 border-emerald-500/30">
-                         <p className="text-emerald-400 font-bold mb-2 uppercase text-[10px] tracking-[0.2em]">{d.term}</p>
-                         <p className="text-gray-200 text-xl font-medium leading-relaxed italic">"{d.definition}"</p>
-                       </div>
-                     ))}
-                   </div>
-                </section>
-              )}
-
-              {/* 10. Predictive Marking Scheme */}
-              {notesData.markingScheme && Array.isArray(notesData.markingScheme) && notesData.markingScheme.length > 0 && (
-                <section className="bg-white/[0.02] border border-white/10 p-10 rounded-[2.5rem] text-left">
-                  <h4 className="text-2xl font-bold mb-8 text-orange-400 flex items-center gap-3">
-                    <FaHighlighter /> Predictive Marking Scheme
-                  </h4>
-                  <div className="space-y-4">
-                    {notesData.markingScheme.map((s, i) => (
-                      <div key={i} className="flex items-center justify-between bg-white/5 border border-white/5 p-6 rounded-2xl">
-                        <div className="flex-1 pr-6">
-                          <p className="text-white font-bold mb-1">{s.component}</p>
-                          <p className="text-xs text-gray-500">{s.detail}</p>
-                        </div>
-                        <div className="shrink-0 bg-orange-500/20 text-orange-400 px-4 py-2 rounded-xl font-black text-sm border border-orange-500/30">
-                          +{s.marks} Marks
-                        </div>
+                {/* 13. Industry 2036 Roadmap & Prototype */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-left">
+                  {notesData.industryRoadmap && Array.isArray(notesData.industryRoadmap) && (
+                    <section className="lg:col-span-2 bg-gradient-to-br from-indigo-500/5 to-transparent border border-white/10 p-10 rounded-[2.5rem] relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-8 opacity-10"><FaTimeline className="text-8xl" /></div>
+                      <h4 className="text-2xl font-bold mb-10 text-indigo-400 flex items-center gap-3">
+                        🚀 Industry 2036 Roadmap
+                      </h4>
+                      <div className="space-y-8 relative z-10">
+                        {notesData.industryRoadmap.map((step, i) => (
+                          <div key={i} className="flex gap-6 group">
+                            <div className="flex flex-col items-center">
+                              <div className="px-3 py-1 bg-indigo-500 text-black font-black rounded-lg text-[10px] mb-2">{step.year}</div>
+                              {i !== notesData.industryRoadmap.length - 1 && <div className="w-px grow bg-indigo-500/20" />}
+                            </div>
+                            <p className="text-gray-300 text-lg font-medium pt-1 group-hover:text-white transition-colors">{step.milestone}</p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </section>
-              )}
+                    </section>
+                  )}
 
-              {/* 11. Glossary & Historical Evolution */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
-                {notesData.glossary && Array.isArray(notesData.glossary) && notesData.glossary.length > 0 && (
-                  <section className="bg-white/[0.02] border border-white/10 p-8 rounded-[2rem]">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-6 flex items-center gap-3">
-                      <FaLanguage /> Glossary
-                    </h4>
-                    <div className="space-y-4">
-                      {notesData.glossary.map((g, i) => (
-                        <div key={i}>
-                          <span className="text-indigo-300 font-bold text-sm block mb-1">{g.term}</span>
-                          <p className="text-xs text-gray-500 leading-relaxed">{g.definition}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-                {notesData.historicalEvolution && (
-                  <section className="bg-indigo-500/5 border border-indigo-500/20 p-8 rounded-[2rem]">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-6 flex items-center gap-3">
-                      <FaClockRotateLeft /> Historical Evolution
-                    </h4>
-                    <p className="text-sm text-gray-400 leading-relaxed italic">
-                      {notesData.historicalEvolution}
-                    </p>
-                  </section>
-                )}
-               </div>
+                  {notesData.futuristicPrototype && (
+                    <section className="bg-[#0a0a0a] border-2 border-indigo-500/30 p-8 rounded-[2rem] relative shadow-[0_0_50px_rgba(79,70,229,0.1)]">
+                      <div className="flex items-center gap-3 text-indigo-400 mb-6 font-black text-xs uppercase tracking-widest">
+                        <FaMicroscope /> AI-Dreamed Prototype
+                      </div>
+                      <h5 className="text-xl font-bold text-white mb-4 italic">"{notesData.futuristicPrototype.concept}"</h5>
+                      <p className="text-sm text-gray-400 leading-relaxed">
+                        {notesData.futuristicPrototype.vision}
+                      </p>
+                      <div className="mt-8 pt-8 border-t border-white/5 flex items-center gap-2 text-[10px] font-black text-indigo-500 uppercase tracking-tighter">
+                        <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                        2036 Feasibility: High
+                      </div>
+                    </section>
+                  )}
+                </div>
 
-               {/* 13. Industry 2036 Roadmap & Prototype */}
-               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-left">
-                 {notesData.industryRoadmap && Array.isArray(notesData.industryRoadmap) && (
-                   <section className="lg:col-span-2 bg-gradient-to-br from-indigo-500/5 to-transparent border border-white/10 p-10 rounded-[2.5rem] relative overflow-hidden">
-                     <div className="absolute top-0 right-0 p-8 opacity-10"><FaTimeline className="text-8xl" /></div>
-                     <h4 className="text-2xl font-bold mb-10 text-indigo-400 flex items-center gap-3">
-                       🚀 Industry 2036 Roadmap
-                     </h4>
-                     <div className="space-y-8 relative z-10">
-                       {notesData.industryRoadmap.map((step, i) => (
-                         <div key={i} className="flex gap-6 group">
-                           <div className="flex flex-col items-center">
-                             <div className="px-3 py-1 bg-indigo-500 text-black font-black rounded-lg text-[10px] mb-2">{step.year}</div>
-                             {i !== notesData.industryRoadmap.length - 1 && <div className="w-px grow bg-indigo-500/20" />}
-                           </div>
-                           <p className="text-gray-300 text-lg font-medium pt-1 group-hover:text-white transition-colors">{step.milestone}</p>
-                         </div>
-                       ))}
-                     </div>
-                   </section>
-                 )}
-
-                 {notesData.futuristicPrototype && (
-                   <section className="bg-[#0a0a0a] border-2 border-indigo-500/30 p-8 rounded-[2rem] relative shadow-[0_0_50px_rgba(79,70,229,0.1)]">
-                     <div className="flex items-center gap-3 text-indigo-400 mb-6 font-black text-xs uppercase tracking-widest">
-                       <FaMicroscope /> AI-Dreamed Prototype
-                     </div>
-                     <h5 className="text-xl font-bold text-white mb-4 italic">"{notesData.futuristicPrototype.concept}"</h5>
-                     <p className="text-sm text-gray-400 leading-relaxed">
-                       {notesData.futuristicPrototype.vision}
-                     </p>
-                     <div className="mt-8 pt-8 border-t border-white/5 flex items-center gap-2 text-[10px] font-black text-indigo-500 uppercase tracking-tighter">
-                       <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-                       2036 Feasibility: High
-                     </div>
-                   </section>
-                 )}
-               </div>
-
-               {/* 14. Zero-Day Hyper-Drive Hack */}
-               {notesData.zeroDayHack && Array.isArray(notesData.zeroDayHack) && notesData.zeroDayHack.length > 0 && (
-                 <section className="bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-2 border-orange-500/30 p-10 rounded-[2.5rem] relative overflow-hidden text-left">
+                {/* 14. Zero-Day Hyper-Drive Hack */}
+                {notesData.zeroDayHack && Array.isArray(notesData.zeroDayHack) && notesData.zeroDayHack.length > 0 && (
+                  <section className="bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-2 border-orange-500/30 p-10 rounded-[2.5rem] relative overflow-hidden text-left">
                     <div className="absolute -top-10 -right-10 text-[180px] text-orange-500/5 font-black uppercase tracking-tighter -rotate-12 pointer-events-none">HACK</div>
                     <h4 className="text-2xl font-black mb-8 text-orange-400 flex items-center gap-4">
                       <FaBoltLightning className="animate-pulse" /> 💎 Zero-Day Hyper-Drive Hack
@@ -726,41 +873,42 @@ const Notes = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {notesData.zeroDayHack.map((hack, i) => (
                         <div key={i} className="bg-black/40 backdrop-blur-md border border-white/10 p-6 rounded-2xl flex items-center gap-4">
-                          <span className="text-orange-500 font-black text-xl italic opacity-50">#{i+1}</span>
+                          <span className="text-orange-500 font-black text-xl italic opacity-50">#{i + 1}</span>
                           <p className="text-sm text-gray-200 font-bold leading-tight">{hack}</p>
                         </div>
                       ))}
                     </div>
                     <p className="mt-8 text-[10px] font-black text-orange-500/50 uppercase tracking-[0.3em] text-center">Open this 120 seconds before entering the hall</p>
-                 </section>
-               )}
+                  </section>
+                )}
 
-               {/* 12. Exam Hall Checklist */}
-               {notesData.examChecklist && Array.isArray(notesData.examChecklist) && notesData.examChecklist.length > 0 && (
-                <section className="bg-emerald-500/5 border border-emerald-500/20 p-10 rounded-[2.5rem] text-left">
-                  <h4 className="text-2xl font-bold mb-8 text-emerald-400 flex items-center gap-3">
-                    <FaListCheck /> Exam Hall Checklist
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {notesData.examChecklist.map((item, i) => (
-                      <div key={i} className="flex items-center gap-4 bg-white/5 border border-white/5 p-4 rounded-xl">
-                        <div className="w-5 h-5 rounded bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                          <FaCheck className="text-[10px]" />
+                {/* 12. Exam Hall Checklist */}
+                {notesData.examChecklist && Array.isArray(notesData.examChecklist) && notesData.examChecklist.length > 0 && (
+                  <section className="bg-emerald-500/5 border border-emerald-500/20 p-10 rounded-[2.5rem] text-left">
+                    <h4 className="text-2xl font-bold mb-8 text-emerald-400 flex items-center gap-3">
+                      <FaListCheck /> Exam Hall Checklist
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {notesData.examChecklist.map((item, i) => (
+                        <div key={i} className="flex items-center gap-4 bg-white/5 border border-white/5 p-4 rounded-xl">
+                          <div className="w-5 h-5 rounded bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                            <FaCheck className="text-[10px]" />
+                          </div>
+                          <span className="text-sm text-gray-300 font-medium">{item}</span>
                         </div>
-                        <span className="text-sm text-gray-300 font-medium">{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
+                      ))}
+                    </div>
+                  </section>
+                )}
 
 
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
-      <Footer />
-    </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.main>
+        <Footer />
+      </div>
+    </motion.div>
   );
 };
 
@@ -781,6 +929,18 @@ const ToggleButton = ({ label, active, onClick }) => (
     </div>
     <span className={`text-[10px] font-black uppercase tracking-widest ${active ? "text-white" : "text-gray-500"}`}>{label}</span>
   </div>
+);
+
+const ModeButton = ({ icon, label, active, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center gap-3 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${active
+      ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+      : "bg-white/5 text-gray-500 border border-white/5 hover:bg-white/10"
+      }`}
+  >
+    {icon} {label}
+  </button>
 );
 
 export default Notes;
@@ -805,14 +965,14 @@ const InteractiveFlashcard = ({ question, answer }) => {
   return (
     <div className="w-full h-44 cursor-pointer relative group" onClick={() => setIsFlipped(!isFlipped)} style={{ perspective: "1000px" }}>
       <motion.div animate={{ rotateY: isFlipped ? 180 : 0 }} transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }} className="w-full h-full absolute" style={{ transformStyle: "preserve-3d" }}>
-        
+
         {/* Front (Question) */}
         <div style={{ backfaceVisibility: "hidden" }} className="absolute inset-0 bg-white/5 border border-white/10 rounded-3xl p-6 flex flex-col items-center justify-center text-center shadow-lg hover:border-emerald-500/30 transition-colors group-hover:bg-white/10">
           <span className="text-emerald-400 font-black text-[10px] uppercase tracking-widest mb-3">Question</span>
           <h3 className="text-white font-bold leading-relaxed">{question}</h3>
           <span className="absolute bottom-4 text-emerald-500/30 text-[10px] font-bold uppercase tracking-widest animate-pulse">Click to Flip ↺</span>
         </div>
-        
+
         {/* Back (Answer) */}
         <div style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }} className="absolute inset-0 bg-emerald-900/40 border border-emerald-500/30 rounded-3xl p-6 flex flex-col items-center justify-center text-center overflow-y-auto shadow-lg custom-scrollbar">
           <span className="text-emerald-400 font-black text-[10px] uppercase tracking-widest mb-3">Answer</span>

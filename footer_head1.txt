@@ -54,9 +54,7 @@ const Footer = () => {
               Quick Access
             </h4>
             <ul className="flex flex-col gap-4">
-              <FooterLink to="/notes" label="Topic to Notes" />
-              <FooterLink to="/notes?mode=video" label="Video to Notes" />
-              <FooterLink to="/notes?mode=pdf" label="PDF to Notes" />
+              <FooterLink to="/notes" label="Generate Notes" />
               <FooterLink to="/my-notes" label="Study History" />
               <FooterLink to="/credits" label="Add Credits" />
             </ul>

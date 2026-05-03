@@ -8,28 +8,43 @@ const GROQ_KEYS = process.env.GROQ_API_KEYS
     ? [process.env.GROQ_API_KEY]
     : [];
 
-const MODEL = "llama-3.3-70b-versatile"; // Best free model on Groq
+// Separate keys for Video/PDF to bypass TPM limits
+const GROQ_KEYS_POWER = process.env.GROQ_API_KEYS_POWER
+  ? process.env.GROQ_API_KEYS_POWER.split(",").map((k) => k.trim()).filter(Boolean)
+  : GROQ_KEYS;
+
+const MODEL = "llama-3.3-70b-versatile";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 let currentKeyIndex = 0;
+let currentPowerKeyIndex = 0;
 
-const getNextKey = () => {
+const getNextKey = (isPower = false) => {
+  if (isPower) {
+    const key = GROQ_KEYS_POWER[currentPowerKeyIndex];
+    currentPowerKeyIndex = (currentPowerKeyIndex + 1) % GROQ_KEYS_POWER.length;
+    return key;
+  }
   const key = GROQ_KEYS[currentKeyIndex];
   currentKeyIndex = (currentKeyIndex + 1) % GROQ_KEYS.length;
   return key;
 };
 
-const fetchExamData = async (prompt) => {
-  if (GROQ_KEYS.length === 0) {
-    throw new Error("No GROQ_API_KEY found in environment variables.");
+const fetchExamData = async (prompt, isPower = false) => {
+  const keysToUse = isPower ? GROQ_KEYS_POWER : GROQ_KEYS;
+  const maxTokens = isPower ? 5500 : 4000;
+  const content = prompt.length > 8000 ? prompt.slice(0, 8000) : prompt;
+
+  if (keysToUse.length === 0) {
+    throw new Error("No API keys found for this operation.");
   }
 
   let lastError = null;
   const attempted429 = new Set();
 
   // Round 1: try each key once
-  for (let i = 0; i < GROQ_KEYS.length; i++) {
-    const apiKey = getNextKey();
+  for (let i = 0; i < keysToUse.length; i++) {
+    const apiKey = getNextKey(isPower);
 
     try {
       const response = await fetch(GROQ_URL, {
@@ -44,16 +59,16 @@ const fetchExamData = async (prompt) => {
             {
               role: "system",
               content:
-                "You are an expert exam notes generator. Always respond with valid JSON only. No markdown, no explanation — just raw JSON.",
+                "You are an expert exam notes generator. Always respond with valid JSON only. Be detailed but concise enough to fit in a single response. No markdown, no explanation — just raw JSON.",
             },
             {
               role: "user",
-              content: prompt,
+              content: content,
             },
           ],
           response_format: { type: "json_object" },
           temperature: 0.7,
-          max_tokens: 6000,
+          max_tokens: maxTokens,
         }),
       });
 
@@ -62,7 +77,7 @@ const fetchExamData = async (prompt) => {
       if (response.status === 429) {
         attempted429.add(apiKey);
         console.log(
-          `⚠️ Groq Key ...${apiKey.slice(-6)} rate limited (${attempted429.size}/${GROQ_KEYS.length})`
+          `⚠️ Groq Key ...${apiKey.slice(-6)} rate limited (${attempted429.size}/${keysToUse.length})`
         );
         lastError = new Error(data.error?.message || "Rate limited");
         continue;
@@ -111,13 +126,13 @@ const fetchExamData = async (prompt) => {
   }
 
   // Round 2: Agar saari keys 429 thi, 65 seconds wait karke retry
-  if (attempted429.size >= GROQ_KEYS.length) {
+  if (attempted429.size >= keysToUse.length) {
     console.log(
-      `⏳ All ${GROQ_KEYS.length} Groq keys rate limited. Waiting 65s...`
+      `⏳ All ${keysToUse.length} Groq keys rate limited. Waiting 65s...`
     );
     await sleep(65000);
 
-    const apiKey = getNextKey();
+    const apiKey = getNextKey(isPower);
     try {
       const response = await fetch(GROQ_URL, {
         method: "POST",
@@ -131,7 +146,7 @@ const fetchExamData = async (prompt) => {
             {
               role: "system",
               content:
-                "You are an expert exam notes generator. Always respond with valid JSON only. No markdown, no explanation — just raw JSON.",
+                "You are an expert exam notes generator. Always respond with valid JSON only. Be detailed but concise enough to fit in a single response. No markdown, no explanation — just raw JSON.",
             },
             {
               role: "user",
@@ -140,7 +155,7 @@ const fetchExamData = async (prompt) => {
           ],
           response_format: { type: "json_object" },
           temperature: 0.7,
-          max_tokens: 6000,
+          max_tokens: maxTokens,
         }),
       });
 

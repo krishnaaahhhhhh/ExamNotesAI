@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import axiosInstance from "../utils/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
@@ -66,7 +66,12 @@ const MyNotes = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#020202] text-white flex flex-col overflow-x-hidden relative selection:bg-indigo-500/30">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="min-h-screen bg-[#020202] text-white flex flex-col overflow-x-hidden relative selection:bg-indigo-500/30"
+    >
       <Navbar />
 
       {/* --- Premium Background Layering --- */}
@@ -76,7 +81,12 @@ const MyNotes = () => {
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-50 contrast-150" />
       </div>
 
-      <main className="flex-grow max-w-7xl mx-auto w-full px-6 py-28 relative z-10">
+      <motion.main 
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.1, duration: 0.5 }}
+        className="flex-grow max-w-7xl mx-auto w-full px-6 py-28 relative z-10"
+      >
         {/* --- Header Section --- */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -190,10 +200,10 @@ const MyNotes = () => {
             </AnimatePresence>
           </div>
         )}
-      </main>
+      </motion.main>
 
       <Footer />
-    </div>
+    </motion.div>
   );
 };
 

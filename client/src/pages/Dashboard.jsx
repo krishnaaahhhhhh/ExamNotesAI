@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useSelector } from "react-redux";
@@ -25,6 +25,23 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [totalNotes, setTotalNotes] = useState(0);
 
+  // Animation Variants
+  const containerVars = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.3
+      }
+    }
+  };
+
+  const itemVars = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+  };
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -43,10 +60,20 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#020202] text-white font-sans selection:bg-indigo-500/30 overflow-x-hidden">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="min-h-screen bg-[#020202] text-white font-sans selection:bg-indigo-500/30 overflow-x-hidden"
+    >
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-6 py-24 relative">
+      <motion.main 
+        variants={containerVars}
+        initial="hidden"
+        animate="show"
+        className="max-w-7xl mx-auto px-6 py-24 relative"
+      >
         {/* Background Glows */}
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-600/5 blur-[120px] rounded-full pointer-events-none" />
@@ -55,8 +82,7 @@ const Dashboard = () => {
           {/* --- TOP ROW: GREETING & STATUS --- */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-16 items-start">
             <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              variants={itemVars}
               className="lg:col-span-8"
             >
               <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 mb-8 backdrop-blur-xl">
@@ -74,8 +100,7 @@ const Dashboard = () => {
             </motion.div>
 
             <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
+              variants={itemVars}
               className="lg:col-span-4 bg-white/[0.02] border border-white/10 rounded-[3rem] p-10 backdrop-blur-3xl relative overflow-hidden group hover:border-indigo-500/30 transition-all duration-700"
             >
                <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/10 blur-[50px] rounded-full group-hover:bg-indigo-500/20 transition-all duration-700" />
@@ -120,6 +145,7 @@ const Dashboard = () => {
           {/* --- MIDDLE ROW: STATS & CREDITS --- */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
             <motion.div 
+               variants={itemVars}
                whileHover={{ y: -5 }}
                className="p-10 rounded-[3rem] bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20 backdrop-blur-xl relative overflow-hidden"
             >
@@ -136,6 +162,7 @@ const Dashboard = () => {
             </motion.div>
 
             <motion.div 
+               variants={itemVars}
                whileHover={{ y: -5 }}
                className="p-10 rounded-[3rem] bg-white/[0.02] border border-white/10 flex flex-col justify-between"
             >
@@ -157,6 +184,7 @@ const Dashboard = () => {
             </motion.div>
 
             <motion.div 
+               variants={itemVars}
                whileHover={{ y: -5 }}
                className="p-10 rounded-[3rem] bg-white/[0.02] border border-white/10 flex flex-col justify-center text-center group"
             >
@@ -208,9 +236,7 @@ const Dashboard = () => {
                 {recentNotes.map((note, i) => (
                   <motion.div
                     key={note._id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.1 }}
+                    variants={itemVars}
                     whileHover={{ y: -8 }}
                     onClick={() => navigate(`/notes/${note._id}`)}
                     className="group p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 hover:border-indigo-500/20 hover:bg-indigo-500/[0.02] transition-all duration-500 cursor-pointer relative overflow-hidden flex flex-col justify-between min-h-[280px]"
@@ -236,10 +262,9 @@ const Dashboard = () => {
             )}
           </div>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+    </motion.main>
+    <Footer />
+  </motion.div>
   );
 };
 

@@ -1,6 +1,6 @@
 import React from "react";
 import Navbar from "../components/Navbar";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import Footer from "../components/Footer";
 import {
   FaArrowDown,
@@ -13,12 +13,38 @@ import {
 
 const Home = () => {
   return (
-    <div className="min-h-screen bg-[#020202] text-white font-sans selection:bg-indigo-500/30 overflow-x-hidden">
-      <Navbar />
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.4 }}
+      className="min-h-screen bg-[#020202] text-white font-sans selection:bg-indigo-500/30 overflow-x-hidden relative"
+    >
+      {/* --- 3D BACKGROUND MODEL --- */}
+      <div className="fixed inset-0 z-0 pointer-events-none opacity-40 lg:opacity-60">
+        <iframe
+          title="Viking book"
+          frameBorder="0"
+          allowFullScreen
+          allow="autoplay; fullscreen; xr-spatial-tracking"
+          src="https://sketchfab.com/models/c23b8c487c3c455cb8ff970a3ec3a5c2/embed?autostart=1&autospin=0.2&preload=1&transparent=1&ui_hint=0&ui_infos=0&ui_stop=0&ui_watermark=0&ui_theme=dark&dnt=1"
+          style={{ 
+            width: '100%', 
+            height: '100vh', 
+            border: '0',
+            filter: 'brightness(0.7) contrast(1.2) hue-rotate(20deg) saturate(1.2)',
+          }}
+        ></iframe>
+        {/* Dark Gradient Overlay for Readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#020202] via-transparent to-[#020202] pointer-events-none" />
+      </div>
 
-      {/* --- HERO SECTION --- */}
-      <section className="relative max-w-7xl mx-auto mt-8 px-6">
-        <div className="rounded-[4rem] p-12 lg:p-32 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/10 relative overflow-hidden shadow-2xl">
+      <div className="relative z-10">
+        <Navbar />
+
+        {/* --- HERO SECTION --- */}
+        <section className="relative max-w-7xl mx-auto mt-8 px-6">
+          <div className="rounded-[4rem] p-12 lg:p-32 bg-transparent border border-white/5 relative overflow-hidden shadow-2xl">
           <motion.div
             animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
             transition={{ duration: 8, repeat: Infinity }}
@@ -172,15 +198,16 @@ const Home = () => {
       </section>
 
       <Footer />
-    </div>
+      </div>
+    </motion.div>
   );
 };
 
 // --- BENTO CARD SUB-COMPONENT ---
 const BentoCard = ({ icon, title, desc, cols, tag }) => (
   <motion.div
-    whileHover={{ y: -10, borderColor: "rgba(99, 102, 241, 0.3)" }}
-    className={`${cols} p-10 rounded-[3rem] bg-white/[0.02] border border-white/5 flex flex-col justify-between min-h-[350px] transition-all group relative overflow-hidden`}
+    whileHover={{ y: -10, borderColor: "rgba(99, 102, 241, 0.3)", backgroundColor: "rgba(255, 255, 255, 0.02)" }}
+    className={`${cols} p-10 rounded-[3rem] bg-transparent border border-white/5 flex flex-col justify-between min-h-[350px] transition-all group relative overflow-hidden`}
   >
     <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-indigo-500/5 blur-[80px] opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 

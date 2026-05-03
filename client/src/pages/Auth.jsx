@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { FcGoogle } from "react-icons/fc";
 import { signInWithPopup } from "firebase/auth";
 import { auth, provider } from "../utils/firebase";
@@ -22,45 +22,37 @@ const Auth = () => {
 
   const handleGoogleAuth = async () => {
     try {
-      // 1. Firebase Popup
       const response = await signInWithPopup(auth, provider);
       const user = response.user;
-
-      // ✅ UI par loader ya status turant dikhao
       setIsRedirecting(true);
 
-      // 2. Backend Call
       const result = await axiosInstance.post(
         "/api/auth/google",
         { name: user.displayName, email: user.email, photo: user.photoURL },
       );
 
       if (result.data.success) {
-        // 3. Save token to localStorage for Authorization header usage
         if (result.data.token) {
           localStorage.setItem("token", result.data.token);
         }
-
-        // 4. Redux state update (Isse Navbar turant update ho jayegi)
         dispatch(setUser(result.data.user));
-
-        // 4. ✅ IMMEDIATE REDIRECT
-        // 'replace: true' use karne se user back button daba kar login page pe nahi ja payega
         navigate("/", { replace: true });
-
-        // 💡 Bonus Tip: Agar Navbar abhi bhi update nahi ho rahi (context issue),
-        // toh navigate ke baad ek manual refresh de sakte ho:
-        // window.location.reload();
       }
     } catch (error) {
-      setIsRedirecting(false); // Error aaye toh redirection status hata do
+      setIsRedirecting(false);
       console.error("Auth Error:", error);
       alert("Auth failed, please try again!");
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#030303] text-white flex flex-col items-center selection:bg-indigo-500/30 overflow-hidden relative font-sans">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.4 }}
+      className="min-h-screen bg-[#030303] text-white flex flex-col items-center selection:bg-indigo-500/30 overflow-hidden relative font-sans"
+    >
       {/* --- Aesthetic Background Mesh --- */}
       <div className="absolute inset-0 z-0">
         <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/10 blur-[140px] rounded-full animate-pulse" />
@@ -226,7 +218,7 @@ const Auth = () => {
           </motion.div>
         </div>
       </footer>
-    </div>
+    </motion.div>
   );
 };
 
