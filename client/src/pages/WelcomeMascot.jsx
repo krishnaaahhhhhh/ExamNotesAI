@@ -18,8 +18,8 @@ import {
 
 const mascotDialogs = {
   intro: {
-    text: "Hey there! I am Synapse, your AI study assistant. Welcome to ExamNotesAI! I am here to help you turn complex university syllabus topics and academic jargon into structured, god-level wisdom. Click on any module below to see how I can upgrade your exam prep!",
-    audioText: "Hey there! I am Synapse, your A.I. study assistant. Welcome to Exam Notes A.I.! I am here to help you turn complex university syllabus topics and academic jargon into structured, god level wisdom. Click on any module below to see how I can upgrade your exam prep!"
+    text: "Hey there! Regards from Krishna, creator of ExamNotesAI. I am Synapse, your AI study companion. I am here to help you turn complex university syllabus topics and academic jargon into structured, god-level wisdom. Click on any module below to see how I can upgrade your exam prep!",
+    audioText: "Hey there! Regards from Krishna, creator of Exam Notes A.I. I am Synapse, your A.I. study companion. I am here to help you turn complex university syllabus topics and academic jargon into structured, god level wisdom. Click on any module below to see how I can upgrade your exam prep!"
   },
   notes: {
     text: "Got an exam tomorrow morning? My Exam Notes engine generates hyper-focused summaries, core formula sheets, structural comparison tables, and mock tests designed specifically to match your class curriculum. Supercharge your revision instantly!",
@@ -126,11 +126,20 @@ const WelcomeMascot = () => {
 
     const utterance = new SpeechSynthesisUtterance(text);
     const voices = window.speechSynthesis.getVoices();
-    const googleVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("Natural"));
-    if (googleVoice) utterance.voice = googleVoice;
+    // Search for David, male voices, or default Microsoft/Google English male voices
+    const maleVoice = voices.find(v => 
+      v.name.includes("David") || 
+      v.name.includes("Male") || 
+      v.name.includes("Google US English Male") ||
+      v.name.includes("Microsoft David")
+    );
+    const englishVoice = maleVoice || voices.find(v => v.lang.startsWith("en-"));
+    if (englishVoice) {
+      utterance.voice = englishVoice;
+    }
     
     utterance.rate = 1.05;
-    utterance.pitch = 1.15;
+    utterance.pitch = 0.95; // Lower pitch for a male/boy voice
     
     utterance.onstart = () => {
       setIsSpeaking(true);
