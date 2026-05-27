@@ -14,6 +14,7 @@ import PaymentFailed from "./pages/PaymentFailed.jsx";
 import SingleNote from "./pages/SingleNote.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Profile from "./pages/Profile.jsx";
+import WelcomeMascot from "./pages/WelcomeMascot.jsx";
 
 const App = () => {
   const dispatch = useDispatch();
@@ -47,6 +48,7 @@ const App = () => {
         <Route path="/notes/:id" element={<SingleNote />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/welcome" element={<WelcomeMascot />} />
 
         {/* Koi bhi unknown route -> /auth */}
         <Route path="*" element={<Navigate to="/auth" />} />
