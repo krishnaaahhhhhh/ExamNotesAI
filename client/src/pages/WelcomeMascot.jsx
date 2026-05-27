@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
+import axiosInstance from "../utils/axiosInstance";
 import {
   FaVolumeHigh,
   FaVolumeXmark,
@@ -9,7 +10,10 @@ import {
   FaFlask,
   FaRegFileLines,
   FaTerminal,
-  FaStar
+  FaStar,
+  FaPaperPlane,
+  FaBolt,
+  FaEye
 } from "react-icons/fa6";
 
 const mascotDialogs = {
@@ -37,8 +41,52 @@ const WelcomeMascot = () => {
   const [typedText, setTypedText] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceMuted, setVoiceMuted] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [mascotStatus, setMascotStatus] = useState("ONLINE"); // ONLINE, SPEAKING, THINKING
+  
   const typingTimer = useRef(null);
   const speechUtterance = useRef(null);
+
+  // Play a premium synthetic digital sound on hover/click using Web Audio API
+  const playSoundEffect = (type = "click") => {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      if (type === "click") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.12);
+        gainNode.gain.setValueAtTime(0.04, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.12);
+      } else if (type === "thinking") {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 0.25);
+        gainNode.gain.setValueAtTime(0.03, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.25);
+      } else if (type === "success") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+        osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.08); // E5
+        gainNode.gain.setValueAtTime(0.03, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.25);
+      }
+    } catch (e) {
+      // AudioContext could be blocked by autoplay policies
+    }
+  };
 
   // Typewriter effect
   useEffect(() => {
@@ -55,9 +103,8 @@ const WelcomeMascot = () => {
       } else {
         clearInterval(typingTimer.current);
       }
-    }, 20);
+    }, 15);
 
-    // Speak content
     speakVoice(mascotDialogs[activeTab].audioText);
 
     return () => {
@@ -73,11 +120,11 @@ const WelcomeMascot = () => {
     window.speechSynthesis.cancel();
     if (voiceMuted) {
       setIsSpeaking(false);
+      setMascotStatus("ONLINE");
       return;
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
-    // Find a premium female/robot sounding voice if possible
     const voices = window.speechSynthesis.getVoices();
     const googleVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("Natural"));
     if (googleVoice) utterance.voice = googleVoice;
@@ -85,9 +132,18 @@ const WelcomeMascot = () => {
     utterance.rate = 1.05;
     utterance.pitch = 1.15;
     
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setMascotStatus("SPEAKING");
+    };
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setMascotStatus("ONLINE");
+    };
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setMascotStatus("ONLINE");
+    };
     
     speechUtterance.current = utterance;
     window.speechSynthesis.speak(utterance);
@@ -98,15 +154,106 @@ const WelcomeMascot = () => {
       window.speechSynthesis.cancel();
     }
     setIsSpeaking(false);
+    setMascotStatus("ONLINE");
   };
 
   const handleMuteToggle = () => {
+    playSoundEffect("click");
     const nextMute = !voiceMuted;
     setVoiceMuted(nextMute);
     if (nextMute) {
       stopVoice();
     } else {
       speakVoice(mascotDialogs[activeTab].audioText);
+    }
+  };
+
+  // Interactive Live Chat
+  const handleSendChat = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || chatLoading) return;
+    
+    const userMsg = chatInput.trim();
+    setChatInput("");
+    setChatLoading(true);
+    setMascotStatus("THINKING");
+    playSoundEffect("thinking");
+    
+    stopVoice();
+    
+    // Set a typewriter "Thinking..." status message
+    setTypedText("Processing input... Synapse is reasoning...");
+    
+    try {
+      const res = await axiosInstance.post("/api/notes/mascot/chat", { message: userMsg });
+      if (res.data.success) {
+        const reply = res.data.reply;
+        playSoundEffect("success");
+        
+        // Custom fast typewriter for response
+        setTypedText("");
+        let index = 0;
+        if (typingTimer.current) clearInterval(typingTimer.current);
+        
+        typingTimer.current = setInterval(() => {
+          if (index < reply.length) {
+            setTypedText((prev) => prev + reply.charAt(index));
+            index++;
+          } else {
+            clearInterval(typingTimer.current);
+          }
+        }, 15);
+        
+        speakVoice(reply);
+      }
+    } catch (err) {
+      console.error(err);
+      setTypedText("Bhai, server offline chala gaya lagta hai. Dobara poochiye na yaar!");
+      setMascotStatus("ONLINE");
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  // Quick Action: Motivational Quote
+  const handleMotivationBoost = async () => {
+    if (chatLoading) return;
+    setChatInput("");
+    setChatLoading(true);
+    setMascotStatus("THINKING");
+    playSoundEffect("thinking");
+    stopVoice();
+    setTypedText("Accessing motivational mainframe...");
+
+    try {
+      const res = await axiosInstance.post("/api/notes/mascot/chat", { 
+        message: "Bhai, mujhe thodi energy aur college level exam motivation quote do Hinglish me tagdi waali!" 
+      });
+      if (res.data.success) {
+        const reply = res.data.reply;
+        playSoundEffect("success");
+        
+        setTypedText("");
+        let index = 0;
+        if (typingTimer.current) clearInterval(typingTimer.current);
+        
+        typingTimer.current = setInterval(() => {
+          if (index < reply.length) {
+            setTypedText((prev) => prev + reply.charAt(index));
+            index++;
+          } else {
+            clearInterval(typingTimer.current);
+          }
+        }, 15);
+        
+        speakVoice(reply);
+      }
+    } catch (err) {
+      console.error(err);
+      setTypedText("Bhai, tension mat lo! Padhte raho aur fodte raho!");
+      setMascotStatus("ONLINE");
+    } finally {
+      setChatLoading(false);
     }
   };
 
@@ -123,11 +270,11 @@ const WelcomeMascot = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 mb-10 flex items-center gap-3 px-5 py-2.5 rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-md"
+        className="relative z-10 mb-8 flex items-center gap-3 px-5 py-2.5 rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-md"
       >
         <FaStar className="text-indigo-400 animate-spin" style={{ animationDuration: '3s' }} />
         <span className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-300">
-          Synapse Interactive Module
+          Synapse Interactive Module v2.0
         </span>
       </motion.div>
 
@@ -136,27 +283,31 @@ const WelcomeMascot = () => {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6 }}
-        className="w-full max-w-5xl bg-gradient-to-br from-white/[0.04] to-transparent border border-white/5 rounded-[4rem] p-8 md:p-14 backdrop-blur-2xl relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 shadow-2xl"
+        className="w-full max-w-6xl bg-gradient-to-br from-white/[0.04] to-transparent border border-white/5 rounded-[4rem] p-8 md:p-14 backdrop-blur-2xl relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 shadow-2xl"
       >
-        {/* Left Side: Mascot Avatar & Controls */}
+        {/* Left Side: Mascot Avatar, Status, and Sound Controls */}
         <div className="lg:col-span-5 flex flex-col items-center justify-center gap-6">
           <div className="relative group">
-            {/* Hologram Ring Backdrops */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500 via-purple-500 to-cyan-500 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity duration-700 animate-pulse" />
+            {/* Hologram Rings */}
+            <div className={`absolute inset-0 bg-gradient-to-tr from-indigo-500 via-purple-500 to-cyan-500 rounded-full blur-2xl transition-opacity duration-500 ${
+              mascotStatus === "THINKING" ? "opacity-40 animate-pulse" : mascotStatus === "SPEAKING" ? "opacity-30" : "opacity-15"
+            }`} />
             <div className="absolute -inset-4 border border-indigo-500/20 rounded-full animate-spin" style={{ animationDuration: '12s' }} />
             <div className="absolute -inset-8 border border-purple-500/10 rounded-full animate-reverse-spin" style={{ animationDuration: '20s' }} />
 
             {/* Mascot Image */}
             <motion.div
               animate={{
-                y: [0, -12, 0],
+                y: mascotStatus === "SPEAKING" ? [0, -8, 0] : [0, -12, 0],
               }}
               transition={{
-                duration: 4,
+                duration: mascotStatus === "SPEAKING" ? 2 : 4,
                 repeat: Infinity,
                 ease: "easeInOut",
               }}
-              className="w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-2 border-white/15 bg-black/40 relative z-10 flex items-center justify-center shadow-2xl"
+              className={`w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-2 bg-black/40 relative z-10 flex items-center justify-center shadow-2xl transition-colors duration-500 ${
+                mascotStatus === "THINKING" ? "border-amber-500/55 shadow-[0_0_30px_rgba(245,158,11,0.2)]" : mascotStatus === "SPEAKING" ? "border-violet-500/50 shadow-[0_0_30px_rgba(139,92,246,0.2)]" : "border-white/15"
+              }`}
             >
               <img
                 src="/ai_mascot.png"
@@ -164,6 +315,20 @@ const WelcomeMascot = () => {
                 className="w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-700"
               />
             </motion.div>
+
+            {/* HUD Status Badge */}
+            <div className={`absolute bottom-4 right-4 z-20 px-3 py-1.5 rounded-full border text-[8px] font-black tracking-widest uppercase flex items-center gap-1.5 shadow-md ${
+              mascotStatus === "THINKING"
+                ? "bg-amber-500/10 border-amber-500/30 text-amber-400 animate-pulse"
+                : mascotStatus === "SPEAKING"
+                  ? "bg-purple-500/10 border-purple-500/30 text-purple-400"
+                  : "bg-green-500/10 border-green-500/30 text-green-400"
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                mascotStatus === "THINKING" ? "bg-amber-400 animate-ping" : mascotStatus === "SPEAKING" ? "bg-purple-400" : "bg-green-400"
+              }`} />
+              {mascotStatus}
+            </div>
           </div>
 
           {/* Voice Wave Visualizer & Mute button */}
@@ -182,15 +347,19 @@ const WelcomeMascot = () => {
                 <motion.div
                   key={i}
                   animate={{
-                    height: isSpeaking ? [4, 20, 4] : 4,
+                    height: isSpeaking ? [4, 20, 4] : mascotStatus === "THINKING" ? [4, 12, 4] : 4,
                   }}
                   transition={{
-                    duration: 0.5 + i * 0.1,
+                    duration: mascotStatus === "THINKING" ? 0.8 + i * 0.15 : 0.4 + i * 0.08,
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
                   className={`w-1 rounded-full ${
-                    isSpeaking ? "bg-indigo-400" : "bg-gray-700"
+                    isSpeaking 
+                      ? "bg-violet-400" 
+                      : mascotStatus === "THINKING" 
+                        ? "bg-amber-400" 
+                        : "bg-gray-700"
                   }`}
                 />
               ))}
@@ -198,87 +367,139 @@ const WelcomeMascot = () => {
           </div>
         </div>
 
-        {/* Right Side: Speech Bubble & Subroutine Tabs */}
-        <div className="lg:col-span-7 flex flex-col justify-between gap-8">
+        {/* Right Side: Speech Bubble, Chat Input, and System Subroutines */}
+        <div className="lg:col-span-7 flex flex-col justify-between gap-6">
           
-          {/* Futuristic Speech Bubble */}
-          <div className="relative bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-inner flex-grow flex flex-col justify-center min-h-[180px]">
+          {/* Speech Terminal Bubble */}
+          <div className="relative bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-8 shadow-inner flex-grow flex flex-col justify-center min-h-[170px]">
             <div className="absolute top-8 -left-3 w-6 h-6 bg-[#0c0c16] border-l border-t border-white/10 rotate-[-45deg] hidden lg:block" />
             
-            <div className="flex items-center gap-2 text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4">
-              <FaTerminal className="text-xs" /> Terminal://Synapse_Voice
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2 text-[10px] font-black text-indigo-400 uppercase tracking-widest">
+                <FaTerminal className="text-xs" /> Terminal://Synapse_Core
+              </div>
+              
+              {/* Motivation booster quick button */}
+              <button
+                onClick={() => {
+                  playSoundEffect("click");
+                  handleMotivationBoost();
+                }}
+                disabled={chatLoading}
+                className="text-[9px] font-black uppercase bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/20 px-3 py-1 rounded-full flex items-center gap-1.5 transition-all cursor-pointer hover:shadow-lg disabled:opacity-50"
+              >
+                <FaBolt /> Motivate Me
+              </button>
             </div>
 
-            <p className="text-gray-300 text-base md:text-lg leading-relaxed font-medium">
+            <p className="text-gray-300 text-sm md:text-base leading-relaxed font-medium">
               {typedText}
               <span className="w-2.5 h-4 bg-indigo-400 inline-block ml-1 animate-pulse" />
             </p>
           </div>
 
-          {/* Subroutines / Navigation Tabs */}
-          <div className="space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 mb-3 pl-2">
-              Select Subroutine Subsystem
+          {/* Interactive Chat Form */}
+          <form 
+            onSubmit={handleSendChat}
+            className="flex gap-2 relative bg-white/5 border border-white/10 rounded-2xl p-2 items-center"
+          >
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder={chatLoading ? "Thinking..." : "Ask Synapse a question (e.g. 'What is a stack?', 'Explain Deep Dive')..."}
+              disabled={chatLoading}
+              className="bg-transparent flex-grow text-sm py-2 px-3 focus:outline-none text-white placeholder-gray-500 disabled:opacity-50"
+            />
+            <button
+              type="submit"
+              disabled={!chatInput.trim() || chatLoading}
+              className="w-10 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 flex items-center justify-center text-xs transition-colors shrink-0 disabled:opacity-50 disabled:bg-white/5 disabled:text-gray-500 cursor-pointer"
+            >
+              {chatLoading ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <FaPaperPlane />
+              )}
+            </button>
+          </form>
+
+          {/* Subroutines Grid */}
+          <div className="space-y-3">
+            <h4 className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-500 pl-2">
+              Select Subsystem Core
             </h4>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => setActiveTab("intro")}
-                className={`flex items-center gap-3 p-4 rounded-2xl border text-left transition-all duration-300 ${
+                onClick={() => {
+                  playSoundEffect("click");
+                  setActiveTab("intro");
+                }}
+                className={`flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all duration-300 ${
                   activeTab === "intro"
                     ? "bg-indigo-500/10 border-indigo-500/40 text-white shadow-[0_0_15px_rgba(99,102,241,0.15)]"
                     : "bg-white/5 border-white/5 hover:border-white/10 text-gray-400 hover:text-white"
                 }`}
               >
-                <FaStar className="text-indigo-400 text-lg shrink-0" />
+                <FaStar className="text-indigo-400 text-sm shrink-0 animate-pulse" />
                 <div>
-                  <p className="text-xs font-black uppercase">System Hello</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Welcome Routine</p>
+                  <p className="text-[10px] font-black uppercase tracking-wider">Hello</p>
+                  <p className="text-[8px] text-gray-500">Welcome Routine</p>
                 </div>
               </button>
 
               <button
-                onClick={() => setActiveTab("notes")}
-                className={`flex items-center gap-3 p-4 rounded-2xl border text-left transition-all duration-300 ${
+                onClick={() => {
+                  playSoundEffect("click");
+                  setActiveTab("notes")}
+                }
+                className={`flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all duration-300 ${
                   activeTab === "notes"
                     ? "bg-indigo-500/10 border-indigo-500/40 text-white shadow-[0_0_15px_rgba(99,102,241,0.15)]"
                     : "bg-white/5 border-white/5 hover:border-white/10 text-gray-400 hover:text-white"
                 }`}
               >
-                <FaRegFileLines className="text-cyan-400 text-lg shrink-0" />
+                <FaRegFileLines className="text-cyan-400 text-sm shrink-0" />
                 <div>
-                  <p className="text-xs font-black uppercase">Exam Notes</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Revision Helper</p>
+                  <p className="text-[10px] font-black uppercase tracking-wider">Exam Notes</p>
+                  <p className="text-[8px] text-gray-500">Revision Engine</p>
                 </div>
               </button>
 
               <button
-                onClick={() => setActiveTab("deepdive")}
-                className={`flex items-center gap-3 p-4 rounded-2xl border text-left transition-all duration-300 ${
+                onClick={() => {
+                  playSoundEffect("click");
+                  setActiveTab("deepdive")}
+                }
+                className={`flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all duration-300 ${
                   activeTab === "deepdive"
                     ? "bg-indigo-500/10 border-indigo-500/40 text-white shadow-[0_0_15px_rgba(99,102,241,0.15)]"
                     : "bg-white/5 border-white/5 hover:border-white/10 text-gray-400 hover:text-white"
                 }`}
               >
-                <FaBrain className="text-violet-400 text-lg shrink-0" />
+                <FaBrain className="text-violet-400 text-sm shrink-0" />
                 <div>
-                  <p className="text-xs font-black uppercase">Deep Dive</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">0-to-Hero Chapters</p>
+                  <p className="text-[10px] font-black uppercase tracking-wider">Deep Dive</p>
+                  <p className="text-[8px] text-gray-500">0-to-Hero Timeline</p>
                 </div>
               </button>
 
               <button
-                onClick={() => setActiveTab("practicals")}
-                className={`flex items-center gap-3 p-4 rounded-2xl border text-left transition-all duration-300 ${
+                onClick={() => {
+                  playSoundEffect("click");
+                  setActiveTab("practicals")}
+                }
+                className={`flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all duration-300 ${
                   activeTab === "practicals"
                     ? "bg-indigo-500/10 border-indigo-500/40 text-white shadow-[0_0_15px_rgba(99,102,241,0.15)]"
                     : "bg-white/5 border-white/5 hover:border-white/10 text-gray-400 hover:text-white"
                 }`}
               >
-                <FaFlask className="text-teal-400 text-lg shrink-0" />
+                <FaFlask className="text-teal-400 text-sm shrink-0" />
                 <div>
-                  <p className="text-xs font-black uppercase">Lab Practicals</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Lab Manual & Code</p>
+                  <p className="text-[10px] font-black uppercase tracking-wider">Lab Manual</p>
+                  <p className="text-[8px] text-gray-500">Practical & Code</p>
                 </div>
               </button>
             </div>
@@ -292,6 +513,7 @@ const WelcomeMascot = () => {
 
             <button
               onClick={() => {
+                playSoundEffect("click");
                 stopVoice();
                 navigate("/notes");
               }}

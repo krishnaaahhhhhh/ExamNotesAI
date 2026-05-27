@@ -183,4 +183,47 @@ const fetchExamData = async (prompt, isPower = false) => {
   throw lastError || new Error("All Groq API keys failed. Please try again.");
 };
 
-module.exports = { fetchExamData };
+const fetchMascotReply = async (message) => {
+  const apiKey = getNextKey(true);
+  if (!apiKey) {
+    throw new Error("No API keys found for mascot chat.");
+  }
+
+  try {
+    const response = await fetch(GROQ_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are 'Synapse', the cute, futuristic, friendly female AI study mascot for ExamNotesAI. You speak in a mix of English and Hinglish (friendly, relatable Indian college slang, e.g. 'Bhai', 'yaar', 'tension mat le'). Keep your answer highly concise (2 to 3 sentences maximum, 50-60 words). Explain concepts, give motivation, or talk generally. Respond in plain text, do NOT use markdown symbols, bold tags (**), or bullet lists.",
+          },
+          {
+            role: "user",
+            content: message,
+          },
+        ],
+        temperature: 0.8,
+        max_tokens: 150,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error?.message || "Groq Mascot Chat Error");
+    }
+
+    return data.choices?.[0]?.message?.content || "Bhai, dimag hang ho gaya mera. Dobara puchna yaar!";
+  } catch (error) {
+    console.error("Mascot chat API failed:", error);
+    return "Bhai, thoda connection issue lag raha hai. Apne networks check karo ya dobara try karo!";
+  }
+};
+
+module.exports = { fetchExamData, fetchMascotReply };

@@ -4,7 +4,7 @@ const axios = require('axios');
 const userModel = require("../models/user.model.js");
 const notesModel = require("../models/notes.model.js");
 const { buildVideoPrompt, buildPracticalPrompt, buildDeepDivePrompt } = require("../utils/promptBuilder.js");
-const { fetchExamData } = require("../services/gemini.services.js");
+const { fetchExamData, fetchMascotReply } = require("../services/gemini.services.js");
 
 
 // Helper to extract Video ID from various YouTube URL formats
@@ -253,5 +253,20 @@ exports.generateDeepDive = async (req, res) => {
     } catch (error) {
         console.error("Deep Dive Error:", error);
         return res.status(500).json({ success: false, message: error.message || "Deep Dive generation failed." });
+    }
+};
+
+exports.mascotChat = async (req, res) => {
+    try {
+        const { message } = req.body;
+        if (!message) {
+            return res.status(400).json({ success: false, reply: "Bhai, query toh likho tabhi toh help kar paungi!" });
+        }
+
+        const reply = await fetchMascotReply(message);
+        return res.status(200).json({ success: true, reply });
+    } catch (error) {
+        console.error("Mascot Chat Controller Error:", error);
+        return res.status(500).json({ success: false, reply: "Mera server thoda off-line chala gaya, ek baar aur koshish karna?" });
     }
 };
