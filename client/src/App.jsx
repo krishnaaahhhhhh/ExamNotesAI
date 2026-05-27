@@ -37,7 +37,7 @@ const App = () => {
         {/* Auth page: agar already logged in toh Home pe jao */}
         <Route
           path="/auth"
-          element={userData ? <Navigate to="/" /> : <Auth />}
+          element={userData ? <Navigate to="/welcome" /> : <Auth />}
         />
 
         <Route path="/notes" element={<Notes />} />
