@@ -37,6 +37,7 @@ const mascotDialogs = {
 
 const WelcomeMascot = () => {
   const navigate = useNavigate();
+  const [isInitialized, setIsInitialized] = useState(false);
   const [activeTab, setActiveTab] = useState("intro");
   const [typedText, setTypedText] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -82,6 +83,14 @@ const WelcomeMascot = () => {
         gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
         osc.start();
         osc.stop(audioCtx.currentTime + 0.25);
+      } else if (type === "powerup") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.6);
+        gainNode.gain.setValueAtTime(0.04, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.6);
       }
     } catch (e) {
       // AudioContext could be blocked by autoplay policies
@@ -90,6 +99,11 @@ const WelcomeMascot = () => {
 
   // Typewriter effect
   useEffect(() => {
+    if (!isInitialized) {
+      setTypedText("System Offline. Click 'Start Guided Tour' to initialize...");
+      return;
+    }
+
     const fullText = mascotDialogs[activeTab].text;
     setTypedText("");
     let index = 0;
@@ -111,7 +125,7 @@ const WelcomeMascot = () => {
       if (typingTimer.current) clearInterval(typingTimer.current);
       stopVoice();
     };
-  }, [activeTab]);
+  }, [activeTab, isInitialized]);
 
   // Voice Speech Synthesis
   const speakVoice = (text) => {
@@ -534,6 +548,63 @@ const WelcomeMascot = () => {
 
         </div>
       </motion.div>
+
+      {/* --- Initialization Autoplay Policy Overlay --- */}
+      <AnimatePresence>
+        {!isInitialized && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-50 bg-[#020202]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.1, duration: 0.4 }}
+              className="max-w-md w-full bg-gradient-to-br from-white/[0.03] to-transparent border border-white/10 rounded-[3rem] p-10 text-center shadow-2xl relative overflow-hidden"
+            >
+              {/* Outer decorative ring */}
+              <div className="absolute -top-16 -right-16 w-44 h-44 bg-indigo-500/10 blur-2xl rounded-full" />
+              <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-purple-500/10 blur-2xl rounded-full" />
+
+              <div className="relative z-10 flex flex-col items-center">
+                {/* Glowing AI Core Icon */}
+                <motion.div
+                  animate={{ scale: [1, 1.05, 1], boxShadow: ["0 0 20px rgba(99, 102, 241, 0.2)", "0 0 40px rgba(99, 102, 241, 0.4)", "0 0 20px rgba(99, 102, 241, 0.2)"] }}
+                  transition={{ repeat: Infinity, duration: 3 }}
+                  className="w-24 h-24 rounded-3xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-4xl text-indigo-400 mb-8"
+                >
+                  <FaBrain className="animate-pulse" />
+                </motion.div>
+
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400 mb-2">
+                  System Overview
+                </span>
+                <h1 className="text-3xl font-black text-white italic uppercase tracking-tight mb-4">
+                  Initialize Synapse
+                </h1>
+                <p className="text-gray-400 text-xs font-medium leading-relaxed mb-8 max-w-xs mx-auto">
+                  Click below to activate the neural speech synthesizer and start the guided tour with Synapse.
+                </p>
+
+                <motion.button
+                  whileHover={{ scale: 1.03, boxShadow: "0 0 30px rgba(99, 102, 241, 0.3)" }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => {
+                    setIsInitialized(true);
+                    playSoundEffect("powerup");
+                  }}
+                  className="w-full py-4.5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl text-xs font-black text-white uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-3 group cursor-pointer"
+                >
+                  Start Guided Tour
+                  <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
