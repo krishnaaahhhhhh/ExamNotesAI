@@ -12,8 +12,10 @@ import {
   FaGear, 
   FaRightFromBracket, 
   FaGem, 
-  FaShieldHalved 
+  FaShieldHalved,
+  FaFlask
 } from "react-icons/fa6";
+
 
 const Navbar = () => {
   const { userData } = useSelector((state) => state.user);
@@ -84,7 +86,41 @@ const Navbar = () => {
         </div>
       </motion.div>
 
+      {/* CENTER: Quick Nav Links */}
+      <div className="hidden md:flex items-center gap-2">
+        <motion.button
+          whileHover={{ y: -2 }}
+          whileTap={{ scale: 0.96 }}
+          onClick={() => navigate("/notes")}
+          className="flex items-center gap-2 px-5 py-2 rounded-2xl text-xs font-black uppercase tracking-widest text-gray-400 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 transition-all"
+        >
+          <FaRocket className="text-indigo-400" />
+          Generate Notes
+        </motion.button>
+
+        <motion.button
+          whileHover={{ y: -2 }}
+          whileTap={{ scale: 0.96 }}
+          onClick={() => navigate("/notes?mode=practical")}
+          className="flex items-center gap-2 px-5 py-2 rounded-2xl text-xs font-black uppercase tracking-widest bg-teal-500/10 border border-teal-500/20 text-teal-400 hover:bg-teal-500/20 hover:border-teal-500/40 hover:shadow-[0_0_15px_rgba(20,184,166,0.2)] transition-all"
+        >
+          <FaFlask />
+          Lab Practical
+        </motion.button>
+
+        <motion.button
+          whileHover={{ y: -2 }}
+          whileTap={{ scale: 0.96 }}
+          onClick={() => navigate("/my-notes")}
+          className="flex items-center gap-2 px-5 py-2 rounded-2xl text-xs font-black uppercase tracking-widest text-gray-400 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 transition-all"
+        >
+          <FaVault className="text-purple-400" />
+          My Notes
+        </motion.button>
+      </div>
+
       {/* 2. Right: Interactive Action Cluster */}
+
       <div className="flex items-center gap-6">
         {/* Credits Section with Pulsing Core */}
         <div className="relative group">

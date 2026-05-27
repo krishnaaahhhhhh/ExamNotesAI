@@ -3,8 +3,9 @@ const pdf = require('pdf-parse');
 const axios = require('axios');
 const userModel = require("../models/user.model.js");
 const notesModel = require("../models/notes.model.js");
-const { buildVideoPrompt } = require("../utils/promptBuilder.js");
+const { buildVideoPrompt, buildPracticalPrompt, buildDeepDivePrompt } = require("../utils/promptBuilder.js");
 const { fetchExamData } = require("../services/gemini.services.js");
+
 
 // Helper to extract Video ID from various YouTube URL formats
 const getVideoId = (url) => {
@@ -132,5 +133,125 @@ exports.generatePDFNotes = async (req, res) => {
     } catch (error) {
         console.error("PDF Notes Error:", error);
         res.status(500).json({ success: false, message: error.message || "Failed to parse PDF." });
+    }
+};
+
+exports.generatePracticalNotes = async (req, res) => {
+    try {
+        const { experimentName, practicalType, university, subject, classLevel } = req.body;
+
+        // Validation
+        if (!experimentName || !practicalType || !classLevel) {
+            return res.status(400).json({
+                success: false,
+                message: "Experiment name, practical type, aur class level required hai!"
+            });
+        }
+        if (!["lab", "computer", "both"].includes(practicalType)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid practical type! Must be: lab, computer, or both."
+            });
+        }
+
+        // Credit check — 25 credits for practical
+        const user = await userModel.findById(req.userId);
+        if (!user) return res.status(404).json({ success: false, message: "User not found!" });
+        if (user.credits < 25) {
+            return res.status(403).json({
+                success: false,
+                message: "Insufficient credits! Practical generation requires 25 credits."
+            });
+        }
+
+        // Build & call AI
+        const prompt = buildPracticalPrompt({ experimentName, practicalType, university, subject, classLevel });
+        const aiResponse = await fetchExamData(prompt, true); // using power key
+
+        if (!aiResponse || typeof aiResponse !== "object") {
+            return res.status(500).json({ success: false, message: "AI returned invalid response. Please retry." });
+        }
+
+        // Save to DB
+        const notes = await notesModel.create({
+            user: req.userId,
+            topic: `Practical: ${experimentName}`,
+            classLevel,
+            examType: university || "Practical Exam",
+            content: aiResponse,
+            metadata: {
+                topic: experimentName,
+                difficulty: "Practical",
+                examStrategy: `${university || "University"} Lab Manual Format`
+            }
+        });
+
+        // Deduct credits
+        user.credits -= 25;
+        if (!user.notes) user.notes = [];
+        user.notes.push(notes._id);
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Practical notes generated successfully!",
+            notesId: notes._id,
+            notesContent: aiResponse,
+        });
+
+    } catch (error) {
+        console.error("Practical Notes Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Practical generation failed. Please try again."
+        });
+    }
+};
+
+exports.generateDeepDive = async (req, res) => {
+    try {
+        const { topic, classLevel } = req.body;
+
+        if (!topic) {
+            return res.status(400).json({ success: false, message: "Topic toh batao bhai!" });
+        }
+
+        const user = await userModel.findById(req.userId);
+        if (!user) return res.status(404).json({ success: false, message: "User not found!" });
+        if (user.credits < 20) {
+            return res.status(403).json({ success: false, message: "Insufficient credits! Deep Dive requires 20 credits." });
+        }
+
+        const prompt = buildDeepDivePrompt({ topic, classLevel });
+        const aiResponse = await fetchExamData(prompt, true);
+
+        if (!aiResponse || typeof aiResponse !== "object") {
+            return res.status(500).json({ success: false, message: "AI returned invalid response. Please retry." });
+        }
+
+        const notes = await notesModel.create({
+            user: req.userId,
+            topic: `Deep Dive: ${topic}`,
+            classLevel: classLevel || "University",
+            examType: "Deep Dive Journey",
+            content: aiResponse,
+            metadata: { topic, difficulty: "Mastery", examStrategy: "0 to Hero Journey" }
+        });
+
+        user.credits -= 20;
+        if (!user.notes) user.notes = [];
+        user.notes.push(notes._id);
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Deep Dive journey generated!",
+            notesId: notes._id,
+            notesContent: aiResponse,
+        });
+
+    } catch (error) {
+        console.error("Deep Dive Error:", error);
+        return res.status(500).json({ success: false, message: error.message || "Deep Dive generation failed." });
     }
 };

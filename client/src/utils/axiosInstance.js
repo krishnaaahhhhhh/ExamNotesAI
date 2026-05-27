@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5008";
+// In dev: Vite proxy handles /api → localhost:5008 (no CORS issue)
+// In prod: Direct URL from env variable
+const API_BASE_URL = import.meta.env.DEV ? "" : (import.meta.env.VITE_API_URL || "http://localhost:5008");
 
 const axiosInstance = axios.create({
     baseURL: API_BASE_URL,

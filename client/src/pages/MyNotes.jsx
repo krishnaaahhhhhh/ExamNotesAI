@@ -9,6 +9,8 @@ import {
   FaVault,
   FaRegFileLines,
   FaClockRotateLeft,
+  FaBrain,
+  FaFlask
 } from "react-icons/fa6";
 
 
@@ -53,7 +55,10 @@ const MyNotes = () => {
     if (typeof content === "object" && content !== null) {
       // Try to find the actual 'notes' or 'summary' inside the object
       const previewText =
-        content.notes ||
+        content.overview ||
+        content.labManual?.aim ||
+        content.computerProgram?.aim ||
+        (typeof content.notes === "string" ? content.notes : content.notes?.content) ||
         content.summary ||
         content.metadata?.topicName ||
         "Deep analysis ready...";
@@ -163,11 +168,27 @@ const MyNotes = () => {
 
                   <div className="relative z-10">
                     <div className="flex justify-between items-start mb-10">
-                      <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-xl text-gray-400 group-hover:text-indigo-400 group-hover:bg-indigo-500/10 transition-all duration-500 shadow-inner">
-                        <FaRegFileLines />
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl transition-all duration-500 shadow-inner ${
+                        note.content?.journey 
+                          ? "bg-violet-500/10 text-violet-400 group-hover:bg-violet-500/20 group-hover:text-violet-300"
+                          : note.content?.labManual || note.content?.computerProgram
+                            ? "bg-teal-500/10 text-teal-400 group-hover:bg-teal-500/20 group-hover:text-teal-300"
+                            : "bg-white/5 text-gray-400 group-hover:text-indigo-400 group-hover:bg-indigo-500/10"
+                      }`}>
+                        {note.content?.journey ? <FaBrain /> : note.content?.labManual || note.content?.computerProgram ? <FaFlask /> : <FaRegFileLines />}
                       </div>
-                      <span className="text-[9px] font-black text-indigo-400/50 uppercase tracking-widest bg-indigo-500/5 px-3 py-1 rounded-full">
-                        {note.classLevel || "Pro"}
+                      <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
+                        note.content?.journey 
+                          ? "bg-violet-500/10 text-violet-400"
+                          : note.content?.labManual || note.content?.computerProgram
+                            ? "bg-teal-500/10 text-teal-400"
+                            : "bg-indigo-500/5 text-indigo-400/50"
+                      }`}>
+                        {note.content?.journey 
+                          ? "Deep Dive" 
+                          : note.content?.labManual || note.content?.computerProgram
+                            ? "Lab Manual" 
+                            : note.classLevel || "Pro"}
                       </span>
                     </div>
 
