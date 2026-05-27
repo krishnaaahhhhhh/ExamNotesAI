@@ -36,7 +36,7 @@ const Auth = () => {
           localStorage.setItem("token", result.data.token);
         }
         dispatch(setUser(result.data.user));
-        navigate("/", { replace: true });
+        navigate("/welcome", { replace: true });
       }
     } catch (error) {
       setIsRedirecting(false);
@@ -120,7 +120,7 @@ const Auth = () => {
               </h2>
               <p className="text-gray-400 font-medium leading-relaxed">
                 {isRedirecting
-                  ? "Aapka verification safal raha. Taiyaar ho jao, hum Home page pe ja rahe hain..."
+                  ? "Aapka verification safal raha. Taiyaar ho jao, hum Welcome page pe ja rahe hain..."
                   : "Join the elite circle of students using AI to dominate their exams."}
                 <span className="text-indigo-400 block mt-1">
                   {!isRedirecting && "Get 50 Launch Credits Free."}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import { motion } from "motion/react";
 import Footer from "../components/Footer";
@@ -12,6 +12,17 @@ import {
 } from "react-icons/fa6";
 
 const Home = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -21,23 +32,25 @@ const Home = () => {
       className="min-h-screen bg-[#020202] text-white font-sans selection:bg-indigo-500/30 overflow-x-hidden relative"
     >
       {/* --- 3D BACKGROUND MODEL --- */}
-      <div className="fixed inset-0 z-0 pointer-events-none opacity-40 lg:opacity-60">
-        <iframe
-          title="Viking book"
-          frameBorder="0"
-          allowFullScreen
-          allow="autoplay; fullscreen; xr-spatial-tracking"
-          src="https://sketchfab.com/models/c23b8c487c3c455cb8ff970a3ec3a5c2/embed?autostart=1&autospin=0.2&preload=1&transparent=1&ui_hint=0&ui_infos=0&ui_stop=0&ui_watermark=0&ui_theme=dark&dnt=1"
-          style={{ 
-            width: '100%', 
-            height: '100vh', 
-            border: '0',
-            filter: 'brightness(0.7) contrast(1.2) hue-rotate(20deg) saturate(1.2)',
-          }}
-        ></iframe>
-        {/* Dark Gradient Overlay for Readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#020202] via-transparent to-[#020202] pointer-events-none" />
-      </div>
+      {!isMobile && (
+        <div className="fixed inset-0 z-0 pointer-events-none opacity-40 lg:opacity-60">
+          <iframe
+            title="Viking book"
+            frameBorder="0"
+            allowFullScreen
+            allow="autoplay; fullscreen; xr-spatial-tracking"
+            src="https://sketchfab.com/models/c23b8c487c3c455cb8ff970a3ec3a5c2/embed?autostart=1&autospin=0.2&preload=1&transparent=1&ui_hint=0&ui_infos=0&ui_stop=0&ui_watermark=0&ui_theme=dark&dnt=1"
+            style={{ 
+              width: '100%', 
+              height: '100vh', 
+              border: '0',
+              filter: 'brightness(0.7) contrast(1.2) hue-rotate(20deg) saturate(1.2)',
+            }}
+          ></iframe>
+          {/* Dark Gradient Overlay for Readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#020202] via-transparent to-[#020202] pointer-events-none" />
+        </div>
+      )}
 
       <div className="relative z-10">
         <Navbar />

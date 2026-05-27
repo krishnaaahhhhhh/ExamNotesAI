@@ -283,7 +283,7 @@ const WelcomeMascot = () => {
       >
         <FaStar className="text-indigo-400 animate-spin" style={{ animationDuration: '3s' }} />
         <span className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-300">
-          Synapse Interactive Module v2.0
+          Overview
         </span>
       </motion.div>
 

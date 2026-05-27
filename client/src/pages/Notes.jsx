@@ -161,6 +161,17 @@ const ExamBarChart = ({ data }) => {
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5008";
 
 const Notes = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const [formData, setFormData] = useState({
     topic: "",
     classLevel: "",
@@ -350,23 +361,25 @@ const Notes = () => {
       className="min-h-screen bg-[#050505] text-white font-sans flex flex-col selection:bg-indigo-500/30 relative"
     >
       {/* --- 3D BACKGROUND MODEL (Paladins Book) --- */}
-      <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
-        <iframe
-          title="Paladins book"
-          frameBorder="0"
-          allowFullScreen
-          allow="autoplay; fullscreen; xr-spatial-tracking"
-          src="https://sketchfab.com/models/07bc6364101c4bd4adaa3d0cee1aaa3e/embed?autostart=1&autospin=0.2&preload=1&transparent=1&ui_hint=0&ui_infos=0&ui_stop=0&ui_watermark=0&ui_theme=dark&dnt=1"
-          style={{
-            width: '100%',
-            height: '100vh',
-            border: '0',
-            filter: 'brightness(0.6) contrast(1.1) hue-rotate(15deg) saturate(1.1)',
-          }}
-        ></iframe>
-        {/* Dark Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#050505] via-transparent to-[#050505] pointer-events-none" />
-      </div>
+      {!isMobile && (
+        <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
+          <iframe
+            title="Paladins book"
+            frameBorder="0"
+            allowFullScreen
+            allow="autoplay; fullscreen; xr-spatial-tracking"
+            src="https://sketchfab.com/models/07bc6364101c4bd4adaa3d0cee1aaa3e/embed?autostart=1&autospin=0.2&preload=1&transparent=1&ui_hint=0&ui_infos=0&ui_stop=0&ui_watermark=0&ui_theme=dark&dnt=1"
+            style={{
+              width: '100%',
+              height: '100vh',
+              border: '0',
+              filter: 'brightness(0.6) contrast(1.1) hue-rotate(15deg) saturate(1.1)',
+            }}
+          ></iframe>
+          {/* Dark Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#050505] via-transparent to-[#050505] pointer-events-none" />
+        </div>
+      )}
 
       <div className="relative z-10">
         <Navbar />
