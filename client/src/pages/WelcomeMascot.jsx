@@ -48,6 +48,7 @@ const WelcomeMascot = () => {
   
   const typingTimer = useRef(null);
   const speechUtterance = useRef(null);
+  const introAudio = useRef(null);
 
   // Play a premium synthetic digital sound on hover/click using Web Audio API
   const playSoundEffect = (type = "click") => {
@@ -119,7 +120,7 @@ const WelcomeMascot = () => {
       }
     }, 15);
 
-    speakVoice(mascotDialogs[activeTab].audioText);
+    speakVoice(mascotDialogs[activeTab].audioText, activeTab === "intro");
 
     return () => {
       if (typingTimer.current) clearInterval(typingTimer.current);
@@ -127,20 +128,10 @@ const WelcomeMascot = () => {
     };
   }, [activeTab, isInitialized]);
 
-  // Voice Speech Synthesis
-  const speakVoice = (text) => {
+  const speakTTS = (text) => {
     if (!("speechSynthesis" in window)) return;
-    
-    window.speechSynthesis.cancel();
-    if (voiceMuted) {
-      setIsSpeaking(false);
-      setMascotStatus("ONLINE");
-      return;
-    }
-
     const utterance = new SpeechSynthesisUtterance(text);
     const voices = window.speechSynthesis.getVoices();
-    // Search for David, male voices, or default Microsoft/Google English male voices
     const maleVoice = voices.find(v => {
       const name = v.name.toLowerCase();
       return name.includes("david") || name.includes("male") || name.includes("google us english male") || name.includes("microsoft david");
@@ -171,9 +162,54 @@ const WelcomeMascot = () => {
     window.speechSynthesis.speak(utterance);
   };
 
+  // Voice Speech Synthesis (checks for custom audio file for intro tab)
+  const speakVoice = (text, isIntro = false) => {
+    window.speechSynthesis.cancel();
+    if (introAudio.current) {
+      introAudio.current.pause();
+      introAudio.current.currentTime = 0;
+    }
+
+    if (voiceMuted) {
+      setIsSpeaking(false);
+      setMascotStatus("ONLINE");
+      return;
+    }
+
+    if (isIntro) {
+      if (!introAudio.current) {
+        introAudio.current = new Audio("/intro_voice.mp3");
+        introAudio.current.onplay = () => {
+          setIsSpeaking(true);
+          setMascotStatus("SPEAKING");
+        };
+        introAudio.current.onended = () => {
+          setIsSpeaking(false);
+          setMascotStatus("ONLINE");
+        };
+        introAudio.current.onerror = () => {
+          setIsSpeaking(false);
+          setMascotStatus("ONLINE");
+          speakTTS(text);
+        };
+      }
+      introAudio.current.volume = 1.0;
+      introAudio.current.play().catch((err) => {
+        console.warn("Custom audio play failed, falling back to TTS:", err);
+        speakTTS(text);
+      });
+    } else {
+      speakTTS(text);
+    }
+  };
+
   const stopVoice = () => {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
+    }
+    if (introAudio.current) {
+      introAudio.current.pause();
+      introAudio.current.currentTime = 0;
     }
     setIsSpeaking(false);
     setMascotStatus("ONLINE");
@@ -186,7 +222,7 @@ const WelcomeMascot = () => {
     if (nextMute) {
       stopVoice();
     } else {
-      speakVoice(mascotDialogs[activeTab].audioText);
+      speakVoice(mascotDialogs[activeTab].audioText, activeTab === "intro");
     }
   };
 
