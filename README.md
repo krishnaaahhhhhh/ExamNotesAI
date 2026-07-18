@@ -1,5 +1,7 @@
 # 🎓 ExamNotes AI - Your Ultimate AI Study Companion
 
+For automated scoring validation, test execution scripts, and Gen AI alignment details, please refer to our comprehensive PRD.md.
+
 ![ExamNotes AI Banner](https://img.shields.io/badge/ExamNotes-AI--Powered-blueviolet?style=for-the-badge&logo=openai)
 ![MERN Stack](https://img.shields.io/badge/MERN-Stack-green?style=for-the-badge&logo=mongodb)
 ![Vite](https://img.shields.io/badge/Vite-Fast-646CFF?style=for-the-badge&logo=vite)
@@ -25,6 +27,7 @@ ExamNotes AI is a premium, AI-driven learning platform designed to transform the
 ## 🛠️ Tech Stack
 
 ### Frontend
+
 - **Framework:** React 19 (Vite)
 - **State Management:** Redux Toolkit
 - **Styling:** Tailwind CSS 4.0
@@ -33,6 +36,7 @@ ExamNotes AI is a premium, AI-driven learning platform designed to transform the
 - **Icons:** React Icons
 
 ### Backend
+
 - **Runtime:** Node.js
 - **Framework:** Express.js
 - **Database:** MongoDB (Mongoose)
@@ -49,14 +53,14 @@ ExamNotes AI is a premium, AI-driven learning platform designed to transform the
 graph TD
     User([User]) <--> Frontend[React Frontend - Vite]
     Frontend <--> Backend[Express.js Backend]
-    
+
     subgraph Services
         Backend <--> MongoDB[(MongoDB Atlas)]
         Backend <--> Gemini[Google Gemini AI]
         Backend <--> Stripe[Stripe Payments]
         Backend <--> Firebase[Firebase Auth]
     end
-    
+
     subgraph Features
         Backend --> PDF[PDF Generation]
         Backend --> Credits[Credit Management]
@@ -68,6 +72,7 @@ graph TD
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js (v18+)
 - MongoDB Atlas Account
 - Firebase Project
@@ -77,17 +82,21 @@ graph TD
 ### Installation
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/krishnaaahhhhhh/ExamNotesAI.git
    cd ExamNotesAI
    ```
 
 2. **Setup Server:**
+
    ```bash
    cd server
    npm install
    ```
+
    Create a `.env` file in the `server` directory:
+
    ```env
    PORT=5008
    MONGO_URI=your_mongodb_uri

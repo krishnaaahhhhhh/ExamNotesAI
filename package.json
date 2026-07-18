@@ -1,0 +1,7 @@
+{
+  "name": "examnotes-ai",
+  "private": true,
+  "scripts": {
+    "test": "cd server && npm test"
+  }
+}
