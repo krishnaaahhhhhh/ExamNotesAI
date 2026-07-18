@@ -33,6 +33,11 @@ app.get("/", (req, res) => {
   res.send("Backend Running 🚀");
 });
 
+// Lightweight health endpoint for automated checks
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // Routes
 app.use("/api/auth", require("./routes/auth.routes"));
 app.use("/api/user", require("./routes/user.router"));
@@ -44,10 +49,16 @@ app.use("/api/credits", creditsRoute);
 
 const PORT = process.env.PORT || 5008;
 
-connectDb().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+// Export app for testing without starting the server automatically
+module.exports = app;
+
+if (require.main === module) {
+  // When run directly, connect DB and start listening
+  connectDb().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }).catch(err => {
+    console.log("Database connection failed", err);
   });
-}).catch(err => {
-  console.log("Database connection failed", err);
-});
+}

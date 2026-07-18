@@ -1,17 +1,18 @@
 const request = require('supertest');
-const express = require('express');
+// Use the real app exported from index for integration checks
+const app = require('./index');
 
-const app = express();
-
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
-});
-
-describe('basic health check', () => {
-  it('returns ok for the health endpoint', async () => {
+describe('basic health check (integration)', () => {
+  it('returns ok for the /health endpoint', async () => {
     const response = await request(app).get('/health');
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ status: 'ok' });
+  });
+
+  it('returns running message at root /', async () => {
+    const response = await request(app).get('/');
+    expect(response.status).toBe(200);
+    expect(typeof response.text).toBe('string');
   });
 });

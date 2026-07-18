@@ -49,7 +49,7 @@ const Footer = () => {
           transition={{ duration: 0.8, delay: 0.1 }}
           className="flex flex-col items-start md:items-center"
         >
-          <div className="flex flex-col gap-6">
+          <nav aria-label="Quick access" className="flex flex-col gap-6">
             <h4 className="text-[11px] font-bold uppercase tracking-[0.3em] text-gray-400 border-b border-gray-100 pb-2">
               Quick Access
             </h4>
@@ -60,7 +60,7 @@ const Footer = () => {
               <FooterLink to="/my-notes" label="Study History" />
               <FooterLink to="/credits" label="Add Credits" />
             </ul>
-          </div>
+          </nav>
         </motion.div>
 
         {/* Right Side: Stylish Signature with Your Links */}
@@ -100,26 +100,34 @@ const Footer = () => {
           </div>
 
           {/* Social Icons with Your Real Links */}
-          <div className="flex gap-4 mt-10">
+          <div
+            className="flex gap-4 mt-10"
+            role="list"
+            aria-label="Social links"
+          >
             <SocialIcon
               icon={<FaInstagram size={18} />}
               color="hover:text-pink-600 hover:bg-pink-50"
               url="https://www.instagram.com/______krishnaaa______?igsh=YzI2c2czNmExbnVw"
+              ariaLabel="Instagram - Krishna"
             />
             <SocialIcon
               icon={<FaXTwitter size={18} />}
               color="hover:text-black hover:bg-gray-100"
               url="https://x.com/alex__creates"
+              ariaLabel="X/Twitter - Krishna"
             />
             <SocialIcon
               icon={<FaLinkedinIn size={18} />}
               color="hover:text-blue-700 hover:bg-blue-50"
               url="https://www.linkedin.com/in/krishna-rathore-984825363?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app"
+              ariaLabel="LinkedIn - Krishna"
             />
             <SocialIcon
               icon={<FaGithub size={18} />}
               color="hover:text-gray-900 hover:bg-gray-100"
               url="https://github.com/krishnaaahhhhhh"
+              ariaLabel="GitHub - Krishna"
             />
           </div>
         </motion.div>
@@ -129,11 +137,12 @@ const Footer = () => {
 };
 
 // Sub-components
-const SocialIcon = ({ icon, color, url }) => (
+const SocialIcon = ({ icon, color, url, ariaLabel }) => (
   <motion.a
     href={url}
     target="_blank"
     rel="noreferrer"
+    aria-label={ariaLabel}
     whileHover={{ y: -5, scale: 1.1 }}
     whileTap={{ scale: 0.9 }}
     className={`w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 transition-all duration-300 shadow-sm ${color}`}
@@ -146,6 +155,7 @@ const FooterLink = ({ to, label }) => (
   <motion.li className="list-none group">
     <Link
       to={to}
+      aria-label={label}
       className="text-gray-500 hover:text-indigo-600 text-sm font-bold transition-all duration-300 flex items-center gap-3"
     >
       <motion.span className="w-1 h-1 bg-gray-300 rounded-full group-hover:w-4 group-hover:bg-indigo-600 transition-all" />
